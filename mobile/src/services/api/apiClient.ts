@@ -36,6 +36,7 @@ import { getAccessToken } from '@/services/authStorage';
 // Configure this per environment; the loopback fallback keeps local web
 // development working when no Expo public variable is provided.
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://127.0.0.1:8000';
+export const API_BASE_URL = BASE_URL;
 
 // ─── Create the Axios instance ────────────────────────────────────────────────
 const apiClient = axios.create({

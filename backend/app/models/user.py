@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.database import Base
@@ -22,6 +22,12 @@ class User(Base):
     university: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     degree: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     graduation_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    push_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    reminder_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

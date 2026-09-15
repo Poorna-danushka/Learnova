@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from app.models.device_token import DeviceToken
+from app.models.user import User
 from app.services.firebase_service import (
     FirebaseConfigurationError,
     send_message,
@@ -44,6 +45,16 @@ def send_to_user(db, user_id: int, payload: NotificationPayload) -> Notification
         from firebase_admin import messaging
     except ImportError as exc:
         raise NotificationServiceError("Notification service is unavailable.") from exc
+
+    user = db.get(User, user_id)
+    if user is not None and not user.push_notifications_enabled:
+        return NotificationResult(attempted=0, sent=0, deactivated=0, failed=0)
+    if (
+        user is not None
+        and payload.data.get("type") == "reminder"
+        and not user.reminder_notifications_enabled
+    ):
+        return NotificationResult(attempted=0, sent=0, deactivated=0, failed=0)
 
     devices = db.query(DeviceToken).filter(
         DeviceToken.user_id == user_id,

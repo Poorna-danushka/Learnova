@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import {
   completeStudyGoal,
@@ -59,6 +60,12 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function defaultScheduledFor() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 30);
+  return date;
+}
+
 export default function PlanningScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
@@ -74,6 +81,9 @@ export default function PlanningScreen() {
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionDuration, setSessionDuration] = useState('60');
+  const [sessionScheduledFor, setSessionScheduledFor] = useState(defaultScheduledFor);
+  const [showSessionDatePicker, setShowSessionDatePicker] = useState(false);
+  const [showSessionTimePicker, setShowSessionTimePicker] = useState(false);
   const [addingSession, setAddingSession] = useState(false);
 
   // Goal create form
@@ -117,13 +127,14 @@ export default function PlanningScreen() {
 
   const addSession = async () => {
     if (!sessionTitle.trim()) { setError('Enter a session title.'); return; }
+    const scheduledFor = sessionScheduledFor;
     setAddingSession(true);
     setError(null);
     try {
       const item = await createStudySession({
         title: sessionTitle.trim(),
         subject_id: subjectId,
-        scheduled_for: new Date().toISOString(),
+        scheduled_for: scheduledFor.toISOString(),
         duration_minutes: parseInt(sessionDuration) || 60,
         is_completed: false,
       });
@@ -301,6 +312,49 @@ export default function PlanningScreen() {
                     ))}
                   </ScrollView>
                   <Field label="Session title" placeholder="e.g. Review lecture notes" value={sessionTitle} onChangeText={setSessionTitle} returnKeyType="done" />
+                  <View style={styles.dateTimeRow}>
+                    <Pressable style={styles.dateTimeButton} onPress={() => setShowSessionDatePicker(true)} accessibilityRole="button" accessibilityLabel="Choose session date">
+                      <Text style={styles.dateTimeLabel}>Date</Text>
+                      <Text style={styles.dateTimeValue}>{sessionScheduledFor.toLocaleDateString()}</Text>
+                    </Pressable>
+                    <Pressable style={styles.dateTimeButton} onPress={() => setShowSessionTimePicker(true)} accessibilityRole="button" accessibilityLabel="Choose session time">
+                      <Text style={styles.dateTimeLabel}>Time</Text>
+                      <Text style={styles.dateTimeValue}>{sessionScheduledFor.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                    </Pressable>
+                  </View>
+                  {showSessionDatePicker && (
+                    <DateTimePicker
+                      value={sessionScheduledFor}
+                      mode="date"
+                      minimumDate={new Date()}
+                      onChange={(_, value) => {
+                        setShowSessionDatePicker(false);
+                        if (value) {
+                          setSessionScheduledFor((current) => {
+                            const next = new Date(current);
+                            next.setFullYear(value.getFullYear(), value.getMonth(), value.getDate());
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                  )}
+                  {showSessionTimePicker && (
+                    <DateTimePicker
+                      value={sessionScheduledFor}
+                      mode="time"
+                      onChange={(_, value) => {
+                        setShowSessionTimePicker(false);
+                        if (value) {
+                          setSessionScheduledFor((current) => {
+                            const next = new Date(current);
+                            next.setHours(value.getHours(), value.getMinutes());
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                  )}
                   <Field label="Duration (minutes)" placeholder="60" keyboardType="numeric" value={sessionDuration} onChangeText={setSessionDuration} returnKeyType="done" />
                   <View style={styles.formActions}>
                     <Button label="Cancel" onPress={() => setShowSessionForm(false)} variant="ghost" size="sm" />
@@ -563,6 +617,10 @@ const styles = StyleSheet.create({
   formLabel: { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
   chipsRow: { gap: Spacing.sm, paddingVertical: Spacing.xs },
   formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm },
+  dateTimeRow: { flexDirection: 'row', gap: Spacing.md },
+  dateTimeButton: { flex: 1, padding: Spacing.md, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.xs },
+  dateTimeLabel: { color: Colors.textMuted, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, textTransform: 'uppercase' },
+  dateTimeValue: { color: Colors.textPrimary, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold },
 
   // Session card
   sessionCard: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },

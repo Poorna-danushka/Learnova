@@ -7,6 +7,8 @@ export type UserRegisterRequest = {
   university?: string;
   degree?: string;
   graduation_year?: number;
+  push_notifications_enabled?: boolean;
+  reminder_notifications_enabled?: boolean;
 };
 
 export type UserRegisterResponse = {
@@ -16,6 +18,8 @@ export type UserRegisterResponse = {
   university?: string;
   degree?: string;
   graduation_year?: number;
+  push_notifications_enabled?: boolean;
+  reminder_notifications_enabled?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -53,6 +57,8 @@ export type UserUpdateRequest = {
   university?: string;
   degree?: string;
   graduation_year?: number;
+  push_notifications_enabled?: boolean;
+  reminder_notifications_enabled?: boolean;
 };
 
 export const updateCurrentUser = async (
