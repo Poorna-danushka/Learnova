@@ -47,6 +47,7 @@ class UserResponse(BaseModel):
     id: int
     full_name: str
     email: str
+    email_verified_at: Optional[datetime] = None
     university: Optional[str] = None
     degree: Optional[str] = None
     graduation_year: Optional[int] = None

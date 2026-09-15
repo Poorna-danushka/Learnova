@@ -103,3 +103,13 @@ def generate_refresh_token() -> tuple[str, str]:
 
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def generate_account_token() -> tuple[str, str]:
+    """Return a high-entropy opaque token and its SHA-256 database hash."""
+    token = secrets.token_urlsafe(48)
+    return token, hash_account_token(token)
+
+
+def hash_account_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

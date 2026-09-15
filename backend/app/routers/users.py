@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.core.security import hash_password, verify_password
 from app.database.database import get_db
+from app.services.account_tokens import issue_verification_token, send_verification_email
+from app.services.email import EmailConfigurationError, EmailDeliveryError, ensure_email_configured
 from app.models.refresh_session import RefreshSession
 from app.models.user import User
 from app.schemas.auth import PasswordChangeRequest
@@ -29,6 +31,11 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="A user with this email already exists.",
         )
 
+    try:
+        ensure_email_configured()
+    except EmailConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     hashed = hash_password(user_data.password)
 
     new_user = User(
@@ -42,8 +49,17 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
     try:
         db.add(new_user)
+        db.flush()
+        verification_token = issue_verification_token(db, new_user)
+        send_verification_email(new_user, verification_token)
         db.commit()
         db.refresh(new_user)
+    except EmailConfigurationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except EmailDeliveryError as exc:
+        db.rollback()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception:
         db.rollback()
         raise HTTPException(

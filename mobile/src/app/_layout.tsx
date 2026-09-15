@@ -106,6 +106,9 @@ function RootLayoutNav() {
       {/* Auth */}
       <Stack.Screen name="login" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="register" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="reset-password" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="verify-email" options={{ animation: 'slide_from_bottom' }} />
 
       {/* Main app tabs */}
       <Stack.Screen name="(tabs)" />

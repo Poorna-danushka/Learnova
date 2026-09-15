@@ -30,3 +30,22 @@ class PasswordChangeRequest(BaseModel):
         if value.strip() == "":
             raise ValueError("Password must not be blank or only whitespace.")
         return value
+
+
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class TokenRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=512)
+
+
+class ResetPasswordRequest(TokenRequest):
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def reset_password_must_not_be_blank(cls, value: str) -> str:
+        if value.strip() == "":
+            raise ValueError("Password must not be blank or only whitespace.")
+        return value

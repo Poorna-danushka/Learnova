@@ -15,6 +15,7 @@ export type UserRegisterResponse = {
   id: number;
   full_name: string;
   email: string;
+  email_verified_at?: string | null;
   university?: string;
   degree?: string;
   graduation_year?: number;
@@ -92,5 +93,31 @@ export const updateCurrentUser = async (
   data: UserUpdateRequest
 ): Promise<UserRegisterResponse> => {
   const response = await apiClient.patch<UserRegisterResponse>('/users/me', data);
+  return response.data;
+};
+
+export const forgotPassword = async (email: string): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
+  return response.data;
+};
+
+export const resetPassword = async (
+  token: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/auth/reset-password', {
+    token,
+    new_password: newPassword,
+  });
+  return response.data;
+};
+
+export const verifyEmail = async (token: string): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/auth/verify-email', { token });
+  return response.data;
+};
+
+export const resendVerification = async (email: string): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/auth/resend-verification', { email });
   return response.data;
 };

@@ -112,6 +112,12 @@ export default function LoginScreen() {
               variant="primary"
               size="lg"
             />
+            <Pressable
+              onPress={() => router.push('/forgot-password' as any)}
+              accessibilityRole="link"
+            >
+              <Text style={styles.forgotLink}>Forgot your password?</Text>
+            </Pressable>
           </View>
 
           {/* Footer */}
@@ -171,4 +177,5 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { color: Colors.textMuted, fontSize: Typography.size.sm },
   footerLink: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+  forgotLink: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, textAlign: 'center' },
 });
