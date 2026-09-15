@@ -33,7 +33,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       const response = await loginUser({ email: email.trim(), password });
-      await signIn(response.access_token);
+      await signIn(response.access_token, response.refresh_token);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError('Incorrect email or password. Please try again.');

@@ -1,5 +1,12 @@
+import hashlib
+import secrets
+from datetime import datetime
+
+import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
+
+from app.core.config import JWT_ALGORITHM, JWT_SECRET
 
 # ---------------------------------------------------------------------------
 # Password hashing setup
@@ -63,3 +70,36 @@ def verify_password(password: str, hashed_password: str) -> bool:
         True if the password matches the hash. False otherwise.
     """
     return password_hasher.verify(password, hashed_password)
+
+
+def create_access_token(
+    *,
+    user_id: int,
+    session_id: str,
+    issued_at: datetime,
+    expires_at: datetime,
+) -> str:
+    """Create an access token with an explicit, verifiable token type."""
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "sid": session_id,
+            "jti": secrets.token_hex(16),
+            "iat": issued_at,
+            "exp": expires_at,
+            "token_type": "access",
+            "type": "access",
+        },
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+    )
+
+
+def generate_refresh_token() -> tuple[str, str]:
+    """Return an opaque refresh token and its SHA-256 database representation."""
+    token = secrets.token_urlsafe(48)
+    return token, hash_refresh_token(token)
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

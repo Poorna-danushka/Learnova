@@ -13,7 +13,12 @@
 //   and every request made through this instance follows those rules.
 
 import axios from 'axios';
-import { getAccessToken } from '@/services/authStorage';
+import {
+  clearAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveAuthTokens,
+} from '@/services/authStorage';
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
 //
@@ -67,5 +72,64 @@ apiClient.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+let authExpiredHandler: (() => void) | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+
+export const setAuthExpiredHandler = (handler: (() => void) | null) => {
+  authExpiredHandler = handler;
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+
+    const config = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
+    const url = config?.url ?? '';
+    if (!config || config._retry || url.includes('/auth/login') || url.includes('/auth/refresh')) {
+      return Promise.reject(error);
+    }
+
+    config._retry = true;
+    try {
+      if (!refreshPromise) {
+        refreshPromise = getRefreshToken()
+          .then((refreshToken) => (
+            refreshToken
+              ? apiClient.post<{ access_token: string; refresh_token: string }>('/auth/refresh', {
+                refresh_token: refreshToken,
+              }).then((response) => response.data)
+              : null
+          ))
+          .then(async (tokens) => {
+            if (!tokens) return null;
+            await saveAuthTokens(tokens.access_token, tokens.refresh_token);
+            return tokens.access_token;
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+
+      const accessToken = await refreshPromise;
+      if (!accessToken) {
+        await clearAuthTokens();
+        authExpiredHandler?.();
+        return Promise.reject(error);
+      }
+      config.headers.Authorization = `Bearer ${accessToken}`;
+      return apiClient(config);
+    } catch (refreshError) {
+      if (axios.isAxiosError(refreshError) && refreshError.response?.status === 401) {
+        await clearAuthTokens();
+        authExpiredHandler?.();
+      }
+      return Promise.reject(refreshError);
+    }
+  },
+);
 
 export default apiClient;

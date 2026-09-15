@@ -31,8 +31,10 @@ export type LoginRequest = {
 
 export type LoginResponse = {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   expires_at: string;
+  refresh_expires_at: string;
 };
 
 export const registerUser = async (
@@ -45,6 +47,31 @@ export const registerUser = async (
 export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   const response = await apiClient.post<LoginResponse>('/auth/login', data);
   return response.data;
+};
+
+export const refreshSession = async (refreshToken: string): Promise<LoginResponse> => {
+  const response = await apiClient.post<LoginResponse>('/auth/refresh', {
+    refresh_token: refreshToken,
+  });
+  return response.data;
+};
+
+export const logoutUser = async (): Promise<void> => {
+  await apiClient.post('/auth/logout');
+};
+
+export type PasswordChangeRequest = {
+  current_password: string;
+  new_password: string;
+};
+
+export const changePassword = async (data: PasswordChangeRequest) => {
+  const response = await apiClient.post('/users/me/password', data);
+  return response.data as { message: string };
+};
+
+export const deleteCurrentUser = async (): Promise<void> => {
+  await apiClient.delete('/users/me');
 };
 
 export const getCurrentUser = async (): Promise<UserRegisterResponse> => {
