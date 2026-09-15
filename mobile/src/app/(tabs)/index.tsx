@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getCurrentUser, UserRegisterResponse } from '@/services/api/userApi';
-import { getStudySessions, StudySession } from '@/services/api/planningApi';
-import { getStudyGoals, StudyGoal } from '@/services/api/planningApi';
+import { getStudyGoals, getStudySessions, StudyGoal, StudySession } from '@/services/api/planningApi';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import {
@@ -70,7 +69,7 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [signOut]);
 
   useEffect(() => { load(); }, [load]);
 
