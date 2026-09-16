@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.database.database import get_db
+from app.services.account_tokens import issue_verification_token, send_verification_email
+from app.services.email import EmailConfigurationError, EmailDeliveryError, ensure_email_configured
+from app.models.refresh_session import RefreshSession
 from app.models.user import User
+from app.schemas.auth import PasswordChangeRequest
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(
@@ -25,6 +31,11 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="A user with this email already exists.",
         )
 
+    try:
+        ensure_email_configured()
+    except EmailConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     hashed = hash_password(user_data.password)
 
     new_user = User(
@@ -38,8 +49,17 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
     try:
         db.add(new_user)
+        db.flush()
+        verification_token = issue_verification_token(db, new_user)
+        send_verification_email(new_user, verification_token)
         db.commit()
         db.refresh(new_user)
+    except EmailConfigurationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except EmailDeliveryError as exc:
+        db.rollback()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception:
         db.rollback()
         raise HTTPException(
@@ -67,3 +87,41 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/password")
+def change_password(
+    password_data: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+    if verify_password(password_data.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current password.",
+        )
+
+    current_user.password_hash = hash_password(password_data.new_password)
+    db.query(RefreshSession).filter(
+        RefreshSession.user_id == current_user.id,
+        RefreshSession.revoked_at.is_(None),
+    ).update(
+        {RefreshSession.revoked_at: datetime.now(timezone.utc)},
+        synchronize_session=False,
+    )
+    db.commit()
+    return {"message": "Password changed successfully. Please sign in again."}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db.delete(current_user)
+    db.commit()

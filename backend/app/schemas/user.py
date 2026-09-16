@@ -32,6 +32,8 @@ class UserUpdate(BaseModel):
     university: Optional[str] = Field(default=None, max_length=255)
     degree: Optional[str] = Field(default=None, max_length=255)
     graduation_year: Optional[int] = Field(default=None, ge=2020, le=2035)
+    push_notifications_enabled: Optional[bool] = None
+    reminder_notifications_enabled: Optional[bool] = None
 
     @field_validator("full_name")
     @classmethod
@@ -45,9 +47,12 @@ class UserResponse(BaseModel):
     id: int
     full_name: str
     email: str
+    email_verified_at: Optional[datetime] = None
     university: Optional[str] = None
     degree: Optional[str] = None
     graduation_year: Optional[int] = None
+    push_notifications_enabled: bool
+    reminder_notifications_enabled: bool
     created_at: datetime
     updated_at: datetime
 

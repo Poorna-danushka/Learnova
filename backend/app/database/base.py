@@ -32,6 +32,8 @@ from app.models.ai_study_plan import AIStudyPlan  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.reminder import Reminder  # noqa: F401
 from app.models.notification_history import NotificationHistory  # noqa: F401
+from app.models.refresh_session import RefreshSession, RefreshToken  # noqa: F401
+from app.models.account_token import AccountToken  # noqa: F401
 
 # Phase 5: Student Profile (add when implemented)
 # from app.models.student_profile import StudentProfile

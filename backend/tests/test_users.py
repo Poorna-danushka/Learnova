@@ -68,6 +68,94 @@ def test_login_rejects_invalid_password(client):
     assert response.status_code == 401
 
 
+def test_refresh_rotates_and_rejects_reuse(client):
+    password = "securepassword123"
+    assert client.post(
+        "/users",
+        json={
+            "full_name": "Refresh Student",
+            "email": "refresh@university.edu",
+            "password": password,
+        },
+    ).status_code == 201
+    login = client.post(
+        "/auth/login",
+        json={"email": "refresh@university.edu", "password": password},
+    ).json()
+
+    rotated = client.post(
+        "/auth/refresh", json={"refresh_token": login["refresh_token"]}
+    )
+    assert rotated.status_code == 200
+    rotated_data = rotated.json()
+    assert rotated_data["refresh_token"] != login["refresh_token"]
+    assert client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {rotated_data['access_token']}"},
+    ).status_code == 200
+
+    reused = client.post(
+        "/auth/refresh", json={"refresh_token": login["refresh_token"]}
+    )
+    assert reused.status_code == 401
+    assert client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {rotated_data['access_token']}"},
+    ).status_code == 401
+
+
+def test_logout_revokes_access_token(client):
+    headers = _auth_headers(
+        client, "logout@university.edu", "Logout Student"
+    )
+    assert client.post("/auth/logout", headers=headers).status_code == 200
+    assert client.get("/users/me", headers=headers).status_code == 401
+
+
+def test_password_change_revokes_existing_sessions(client):
+    old_password = "securepassword123"
+    assert client.post(
+        "/users",
+        json={
+            "full_name": "Password Student",
+            "email": "password@university.edu",
+            "password": old_password,
+        },
+    ).status_code == 201
+    login = client.post(
+        "/auth/login",
+        json={"email": "password@university.edu", "password": old_password},
+    ).json()
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    changed = client.post(
+        "/users/me/password",
+        json={"current_password": old_password, "new_password": "newpassword123"},
+        headers=headers,
+    )
+    assert changed.status_code == 200
+    assert client.get("/users/me", headers=headers).status_code == 401
+    assert client.post(
+        "/auth/login",
+        json={
+            "email": "password@university.edu",
+            "password": "newpassword123",
+        },
+    ).status_code == 200
+
+
+def test_account_deletion_revokes_account(client):
+    headers = _auth_headers(
+        client, "delete@university.edu", "Delete Student"
+    )
+    assert client.delete("/users/me", headers=headers).status_code == 204
+    assert client.get("/users/me", headers=headers).status_code == 401
+    assert client.post(
+        "/auth/login",
+        json={"email": "delete@university.edu", "password": "securepassword123"},
+    ).status_code == 401
+
+
 def test_current_user_requires_token(client):
     response = client.get("/users/me")
     assert response.status_code == 401

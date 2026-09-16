@@ -13,6 +13,9 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "10080")
 )
+JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(
+    os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30")
+)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30"))
@@ -34,6 +37,28 @@ REMINDER_SCHEDULER_ENABLED = os.getenv("REMINDER_SCHEDULER_ENABLED", "false").lo
 REMINDER_SCHEDULER_INTERVAL_SECONDS = int(
     os.getenv("REMINDER_SCHEDULER_INTERVAL_SECONDS", "30")
 )
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL", os.getenv("APP_URL", "http://localhost:8081")
+).rstrip("/")
+APP_URL = FRONTEND_URL
+EMAIL_VERIFICATION_URL = os.getenv(
+    "EMAIL_VERIFICATION_URL", f"{FRONTEND_URL}/verify-email"
+).rstrip("/")
+PASSWORD_RESET_URL = os.getenv(
+    "PASSWORD_RESET_URL", f"{FRONTEND_URL}/reset-password"
+).rstrip("/")
+EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS = int(
+    os.getenv("EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS", "24")
+)
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30")
+)
+if APP_ENV == "production" and (not RESEND_API_KEY or not RESEND_FROM_EMAIL):
+    raise RuntimeError(
+        "RESEND_API_KEY and RESEND_FROM_EMAIL must be set in production."
+    )
 configured_cors_origins = os.getenv("CORS_ORIGINS")
 if configured_cors_origins:
     CORS_ORIGINS = [
