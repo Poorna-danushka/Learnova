@@ -24,6 +24,10 @@ import { useAuth } from '@/context/AuthContext';
 import { askMaterial, parseAIError, isAuthError, type AIErrorKind } from '@/services/api/aiApi';
 import { AIAnswerCard } from '@/components/AIAnswerCard';
 import axios from 'axios';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Linking from 'expo-linking';
+import { getAccessToken } from '@/services/authStorage';
+import { API_BASE_URL } from '@/services/api/apiClient';
 
 // ─── Per-material AI state ─────────────────────────────────────────────────────
 interface MaterialAIState {
@@ -144,7 +148,28 @@ export default function MaterialsScreen() {
 
   const openMaterial = async (material: StudyMaterial) => {
     if (Platform.OS !== 'web') {
-      Alert.alert('Open material', 'Material opening is currently available in the web app.');
+      try {
+        const token = await getAccessToken();
+        if (!FileSystem.cacheDirectory) {
+          throw new Error('File cache is unavailable.');
+        }
+        const target = `${FileSystem.cacheDirectory}${material.original_filename}`;
+        const result = await FileSystem.downloadAsync(
+          `${API_BASE_URL}/study-materials/${material.id}/download`,
+          target,
+          { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+        );
+        const contentUri = Platform.OS === 'android'
+          ? await FileSystem.getContentUriAsync(result.uri)
+          : result.uri;
+        await Linking.openURL(contentUri);
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          signOut();
+        } else {
+          Alert.alert('Open failed', 'There was an error opening the material.');
+        }
+      }
       return;
     }
     try {

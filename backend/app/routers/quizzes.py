@@ -161,17 +161,6 @@ def _resolve_source_context(
                 except AIInputError:
                     pass  # skip unreadable files silently
 
-    # Must have real content beyond just subject metadata
-    if not notes and not materials:
-        raise HTTPException(
-            422,
-            detail=(
-                "This subject has no notes or study materials. "
-                "Add notes or upload a PDF/document first, "
-                "or use 'From Material' to generate from an uploaded file."
-            ),
-        )
-
     return "\n\n".join(context_parts)
 
 

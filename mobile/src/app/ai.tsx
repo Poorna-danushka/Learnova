@@ -504,7 +504,7 @@ export default function AIAssistantScreen() {
                     <Text style={{ fontSize: 24 }}>✦</Text>
                   </View>
                   <Text style={styles.chatWelcomeText}>
-                    Hi! I'm Nexora AI. Ask me anything about your studies.
+                    Hi! I&apos;m Nexora AI. Ask me anything about your studies.
                   </Text>
                   {/* Suggestion chips */}
                   <View style={styles.suggestions}>

@@ -27,7 +27,7 @@ export default function NoteEditorScreen() {
   const { id, subjectId } = useLocalSearchParams();
   const router = useRouter();
   const { signOut } = useAuth();
-  const isNew = id === 'new';
+  const isNew = id === 'new' || id === undefined;
 
   const [note, setNote] = useState<Note | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);

@@ -369,8 +369,6 @@ export function AIAnswerCard({
   const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!loading && !error && !answer) return null;
-
   const handleReadAloud = useCallback(async () => {
     if (!answer) return;
     if (speaking) {
@@ -395,6 +393,8 @@ export function AIAnswerCard({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [answer]);
+
+  if (!loading && !error && !answer) return null;
 
   return (
     <View style={styles.card}>
