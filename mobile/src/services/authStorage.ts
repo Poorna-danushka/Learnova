@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const ACCESS_TOKEN_KEY = 'nexora.access_token';
+const REFRESH_TOKEN_KEY = 'nexora.refresh_token';
 
 const getWebStorage = () => {
   if (Platform.OS !== 'web' || typeof globalThis.localStorage === 'undefined') return null;
@@ -39,4 +40,37 @@ export const clearAccessToken = async () => {
     }
     throw error;
   }
+};
+
+export const getRefreshToken = () => {
+  const storage = getWebStorage();
+  return storage
+    ? Promise.resolve(storage.getItem(REFRESH_TOKEN_KEY))
+    : SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+};
+
+export const saveRefreshToken = async (token: string) => {
+  const storage = getWebStorage();
+  if (storage) {
+    storage.setItem(REFRESH_TOKEN_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+};
+
+export const clearRefreshToken = async () => {
+  const storage = getWebStorage();
+  if (storage) {
+    storage.removeItem(REFRESH_TOKEN_KEY);
+    return;
+  }
+  await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+};
+
+export const saveAuthTokens = async (accessToken: string, refreshToken: string) => {
+  await Promise.all([saveAccessToken(accessToken), saveRefreshToken(refreshToken)]);
+};
+
+export const clearAuthTokens = async () => {
+  await Promise.all([clearAccessToken(), clearRefreshToken()]);
 };

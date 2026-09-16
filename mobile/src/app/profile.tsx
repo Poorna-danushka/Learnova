@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateCurrentUser } from '@/services/api/userApi';
@@ -23,6 +24,8 @@ type UserData = {
   university: string;
   degree: string;
   graduation_year: string;
+  push_notifications_enabled: boolean;
+  reminder_notifications_enabled: boolean;
 };
 
 export default function ProfileScreen() {
@@ -38,6 +41,8 @@ export default function ProfileScreen() {
     university: '',
     degree: '',
     graduation_year: '',
+    push_notifications_enabled: true,
+    reminder_notifications_enabled: true,
   });
   const [form, setForm] = useState<UserData>({ ...userData });
 
@@ -50,6 +55,8 @@ export default function ProfileScreen() {
           university: u.university ?? '',
           degree: u.degree ?? '',
           graduation_year: u.graduation_year?.toString() ?? '',
+          push_notifications_enabled: u.push_notifications_enabled ?? true,
+          reminder_notifications_enabled: u.reminder_notifications_enabled ?? true,
         };
         setUserData(data);
         setForm(data);
@@ -77,6 +84,8 @@ export default function ProfileScreen() {
         university: form.university.trim() || undefined,
         degree: form.degree.trim() || undefined,
         graduation_year: form.graduation_year ? Number(form.graduation_year) : undefined,
+        push_notifications_enabled: form.push_notifications_enabled,
+        reminder_notifications_enabled: form.reminder_notifications_enabled,
       });
       setUserData(form);
       setEditing(false);
@@ -240,6 +249,61 @@ export default function ProfileScreen() {
                 {/* Account section */}
                 {!editing && (
                   <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>Notifications</Text>
+                    <View style={styles.sectionCard}>
+                      <View style={styles.preferenceRow}>
+                        <View style={styles.preferenceText}>
+                          <Text style={styles.infoValue}>Push notifications</Text>
+                          <Text style={styles.infoLabel}>Allow Nexora to send updates to this device.</Text>
+                        </View>
+                        <Switch
+                          value={userData.push_notifications_enabled}
+                          onValueChange={async (value) => {
+                            const previous = userData.push_notifications_enabled;
+                            const next = { ...form, push_notifications_enabled: value };
+                            setUserData((current) => ({ ...current, push_notifications_enabled: value }));
+                            setForm(next);
+                            try {
+                              await updateCurrentUser({ push_notifications_enabled: value });
+                            } catch {
+                              setUserData((current) => ({ ...current, push_notifications_enabled: previous }));
+                              setForm((current) => ({ ...current, push_notifications_enabled: previous }));
+                              setMessage({ text: 'Unable to update notification settings.', tone: 'error' });
+                            }
+                          }}
+                          trackColor={{ false: Colors.border, true: Colors.primary }}
+                          thumbColor={Colors.white}
+                        />
+                      </View>
+                      <View style={styles.preferenceRow}>
+                        <View style={styles.preferenceText}>
+                          <Text style={styles.infoValue}>Study reminders</Text>
+                          <Text style={styles.infoLabel}>Receive scheduled reminder notifications.</Text>
+                        </View>
+                        <Switch
+                          value={userData.reminder_notifications_enabled}
+                          onValueChange={async (value) => {
+                            const previous = userData.reminder_notifications_enabled;
+                            setUserData((current) => ({ ...current, reminder_notifications_enabled: value }));
+                            setForm((current) => ({ ...current, reminder_notifications_enabled: value }));
+                            try {
+                              await updateCurrentUser({ reminder_notifications_enabled: value });
+                            } catch {
+                              setUserData((current) => ({ ...current, reminder_notifications_enabled: previous }));
+                              setForm((current) => ({ ...current, reminder_notifications_enabled: previous }));
+                              setMessage({ text: 'Unable to update reminder settings.', tone: 'error' });
+                            }
+                          }}
+                          trackColor={{ false: Colors.border, true: Colors.primary }}
+                          thumbColor={Colors.white}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {!editing && (
+                  <View style={styles.section}>
                     <Text style={styles.sectionLabel}>Account</Text>
                     <View style={styles.sectionCard}>
                       <Pressable
@@ -250,6 +314,16 @@ export default function ProfileScreen() {
                       >
                         <Text style={styles.accountRowIcon}>⏻</Text>
                         <Text style={styles.signOutText}>Sign Out</Text>
+                        <Text style={styles.accountRowChevron}>›</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => router.push('/notifications' as never)}
+                        style={({ pressed }) => [styles.accountRow, pressed && { opacity: 0.7 }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open notifications"
+                      >
+                        <Text style={styles.accountRowIcon}>◌</Text>
+                        <Text style={styles.signOutText}>Notification inbox</Text>
                         <Text style={styles.accountRowChevron}>›</Text>
                       </Pressable>
                     </View>
@@ -312,6 +386,8 @@ const styles = StyleSheet.create({
   signOutText: { color: Colors.error, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold, flex: 1 },
 
   appInfo: { alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.lg },
+  preferenceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
+  preferenceText: { flex: 1, gap: Spacing.xs },
   appName: { color: Colors.textMuted, fontSize: Typography.size.lg, fontWeight: Typography.weight.black, letterSpacing: 1 },
   appVersion: { color: Colors.textMuted, fontSize: Typography.size.xs, textAlign: 'center' },
 });

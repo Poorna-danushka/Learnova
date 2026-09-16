@@ -92,8 +92,8 @@ export default function RegisterScreen() {
         degree: data.degree || undefined,
         graduation_year: data.graduation_year ? Number(data.graduation_year) : undefined,
       });
-      setSuccessMessage(`Account created for ${response.full_name}! Redirecting…`);
-      setTimeout(() => router.replace('/login'), 900);
+      setSuccessMessage(`Account created for ${response.full_name}! Check your email to verify your account.`);
+      setTimeout(() => router.replace({ pathname: '/verify-email', params: { email: data.email } } as any), 900);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 409) {

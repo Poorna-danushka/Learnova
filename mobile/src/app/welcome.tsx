@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -27,7 +27,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const fade = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(40)).current;
-  const cardAnims = FLOAT_CARDS.map(() => useRef(new Animated.Value(0)).current);
+  const [cardAnims] = useState(() => FLOAT_CARDS.map(() => new Animated.Value(0)));
 
   useEffect(() => {
     // Main content fade in

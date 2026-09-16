@@ -4,6 +4,7 @@ export interface UserProfile {
   id: number;
   full_name: string;
   email: string;
+  email_verified_at?: string | null;
   university?: string;
   degree?: string;
   graduation_year?: number;

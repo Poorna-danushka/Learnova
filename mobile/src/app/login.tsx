@@ -33,7 +33,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       const response = await loginUser({ email: email.trim(), password });
-      await signIn(response.access_token);
+      await signIn(response.access_token, response.refresh_token);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError('Incorrect email or password. Please try again.');
@@ -112,11 +112,17 @@ export default function LoginScreen() {
               variant="primary"
               size="lg"
             />
+            <Pressable
+              onPress={() => router.push('/forgot-password' as any)}
+              accessibilityRole="link"
+            >
+              <Text style={styles.forgotLink}>Forgot your password?</Text>
+            </Pressable>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>Don&apos;t have an account? </Text>
             <Pressable onPress={() => router.push('/register' as any)} accessibilityRole="link">
               <Text style={styles.footerLink}>Create one</Text>
             </Pressable>
@@ -171,4 +177,5 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { color: Colors.textMuted, fontSize: Typography.size.sm },
   footerLink: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+  forgotLink: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, textAlign: 'center' },
 });

@@ -67,7 +67,7 @@ export default function AuthScreen() {
         </View>
 
         <Text style={styles.terms}>
-          By continuing, you agree to Nexora's{'\n'}Terms of Service and Privacy Policy.
+          By continuing, you agree to Nexora&apos;s{'\n'}Terms of Service and Privacy Policy.
         </Text>
       </Animated.View>
     </SafeAreaView>

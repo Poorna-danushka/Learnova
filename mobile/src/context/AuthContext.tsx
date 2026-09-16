@@ -3,14 +3,15 @@
 // Calling signOut() clears the token AND triggers a full navigation reset to /auth.
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-import { clearAccessToken, getAccessToken, saveAccessToken } from '@/services/authStorage';
+import { clearAuthTokens, getAccessToken, saveAuthTokens } from '@/services/authStorage';
+import { logoutUser } from '@/services/api/userApi';
+import { setAuthExpiredHandler } from '@/services/api/apiClient';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthContextType {
   status: AuthStatus;
-  signIn: (token: string) => Promise<void>;
+  signIn: (accessToken: string, refreshToken: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -30,14 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setStatus('unauthenticated'));
   }, []);
 
-  const signIn = useCallback(async (token: string) => {
-    await saveAccessToken(token);
+  const signIn = useCallback(async (accessToken: string, refreshToken: string) => {
+    await saveAuthTokens(accessToken, refreshToken);
     setStatus('authenticated');
   }, []);
 
   const signOut = useCallback(async () => {
-    await clearAccessToken();
+    try {
+      await logoutUser();
+    } catch {
+      // The local session must still be cleared if the API is unavailable.
+    }
+    await clearAuthTokens();
     setStatus('unauthenticated');
+  }, []);
+
+  useEffect(() => {
+    setAuthExpiredHandler(() => {
+      void clearAuthTokens();
+      setStatus('unauthenticated');
+    });
+    return () => setAuthExpiredHandler(null);
   }, []);
 
   return (
