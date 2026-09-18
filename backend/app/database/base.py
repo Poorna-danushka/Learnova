@@ -20,6 +20,7 @@ from app.database.database import Base  # noqa: F401
 # ── Models (import every model file here) ────────────────────────────────────
 # Phase 1-4: Authentication & User Management
 from app.models.user import User  # noqa: F401
+from app.models.module import Module  # noqa: F401
 from app.models.subject import Subject  # noqa: F401
 from app.models.note import Note  # noqa: F401
 from app.models.study_material import StudyMaterial  # noqa: F401
