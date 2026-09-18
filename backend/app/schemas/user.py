@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.schemas.auth import validate_password_strength
+
 
 class UserCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=255)
@@ -14,10 +16,8 @@ class UserCreate(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def password_must_not_be_blank(cls, value: str) -> str:
-        if value.strip() == "":
-            raise ValueError("Password must not be blank or only whitespace.")
-        return value
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
 
     @field_validator("full_name")
     @classmethod

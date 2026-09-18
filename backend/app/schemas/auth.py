@@ -1,6 +1,39 @@
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def validate_password_strength(password: str) -> str:
+    """
+    Validate password meets security requirements.
+    
+    Requirements:
+    - Minimum 8 characters
+    - At least 1 uppercase letter
+    - At least 1 lowercase letter
+    - At least 1 number
+    - At least 1 special character
+    """
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    
+    if not re.search(r"[a-z]", password):
+        raise ValueError("Password must contain at least one lowercase letter")
+    
+    if not re.search(r"[0-9]", password):
+        raise ValueError("Password must contain at least one number")
+    
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\\/;']", password):
+        raise ValueError("Password must contain at least one special character (!@#$%^&* etc.)")
+    
+    if password.strip() != password:
+        raise ValueError("Password must not contain leading or trailing whitespace")
+    
+    return password
 
 
 class LoginRequest(BaseModel):
@@ -26,10 +59,8 @@ class PasswordChangeRequest(BaseModel):
 
     @field_validator("new_password")
     @classmethod
-    def new_password_must_not_be_blank(cls, value: str) -> str:
-        if value.strip() == "":
-            raise ValueError("Password must not be blank or only whitespace.")
-        return value
+    def validate_new_password(cls, value: str) -> str:
+        return validate_password_strength(value)
 
 
 class EmailRequest(BaseModel):
@@ -45,7 +76,5 @@ class ResetPasswordRequest(TokenRequest):
 
     @field_validator("new_password")
     @classmethod
-    def reset_password_must_not_be_blank(cls, value: str) -> str:
-        if value.strip() == "":
-            raise ValueError("Password must not be blank or only whitespace.")
-        return value
+    def validate_reset_password(cls, value: str) -> str:
+        return validate_password_strength(value)
