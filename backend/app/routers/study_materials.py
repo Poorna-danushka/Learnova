@@ -1,4 +1,4 @@
-import re
+﻿import re
 import os
 import tempfile
 import uuid
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.study_material import StudyMaterial
-from app.models.subject import Subject
+from app.models.module import Module
 from app.models.user import User
 from app.schemas.ai import MaterialQuestionRequest, MaterialQuestionResponse
 from app.schemas.study_material import StudyMaterialResponse
@@ -75,9 +75,9 @@ def validate_file_signature(path: Path, extension: str) -> None:
         raise HTTPException(status_code=415, detail="File content does not match its declared type.")
 
 
-def owned_subject(subject_id: int, user: User, db: Session) -> Subject:
-    subject = db.query(Subject).filter(
-        Subject.id == subject_id, Subject.owner_id == user.id
+def owned_module(module_id: int, user: User, db: Session) -> Module:
+    subject = db.query(Module).filter(
+        Module.id == module_id, Module.owner_id == user.id
     ).first()
     if subject is None:
         raise HTTPException(status_code=404, detail="Subject not found.")
@@ -95,12 +95,12 @@ def owned_material(material_id: int, user: User, db: Session) -> StudyMaterial:
 
 @router.post("", response_model=StudyMaterialResponse, status_code=201)
 async def upload_material(
-    subject_id: int,
+    module_id: int,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    owned_subject(subject_id, current_user, db)
+    owned_module(module_id, current_user, db)
     raw_name = file.filename or ""
     original_name = Path(raw_name).name
     extension = Path(original_name).suffix.lower()
@@ -135,7 +135,7 @@ async def upload_material(
 
     material = StudyMaterial(
         owner_id=current_user.id,
-        subject_id=subject_id,
+        module_id =module_id,
         original_filename=original_name,
         stored_filename=stored_name,
         content_type=file.content_type,
@@ -157,13 +157,13 @@ async def upload_material(
 
 @router.get("", response_model=list[StudyMaterialResponse])
 def list_materials(
-    subject_id: int | None = None,
+    module_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     query = db.query(StudyMaterial).filter(StudyMaterial.owner_id == current_user.id)
     if subject_id is not None:
-        query = query.filter(StudyMaterial.subject_id == subject_id)
+        query = query.filter(StudyMaterial.module_id == subject_id)
     return query.order_by(StudyMaterial.created_at.desc()).all()
 
 

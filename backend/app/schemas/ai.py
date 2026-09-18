@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
+﻿from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class NoteSummaryResponse(BaseModel):
@@ -29,18 +29,18 @@ class MaterialQuestionResponse(BaseModel):
 
 
 class StudyPlanRequest(BaseModel):
-    subject_ids: list[int] = Field(default_factory=list, max_length=20)
+    module_ids: list[int] = Field(default_factory=list, max_length=20)
     days: int = Field(default=7, ge=1, le=30)
     minutes_per_day: int = Field(default=60, ge=15, le=480)
     priorities: str | None = Field(default=None, max_length=2000)
 
-    @field_validator("subject_ids")
+    @field_validator("module_ids")
     @classmethod
-    def subject_ids_must_be_positive(cls, value: list[int]) -> list[int]:
-        if any(subject_id <= 0 for subject_id in value):
-            raise ValueError("Subject IDs must be positive.")
+    def module_ids_must_be_positive(cls, value: list[int]) -> list[int]:
+        if any(module_id <= 0 for module_id in value):
+            raise ValueError("Module IDs must be positive.")
         if len(set(value)) != len(value):
-            raise ValueError("Subject IDs must be unique.")
+            raise ValueError("Module IDs must be unique.")
         return value
 
     @field_validator("priorities")
@@ -55,14 +55,14 @@ class StudyPlanResponse(BaseModel):
     id: int | None = None
     plan: str
     title: str | None = None
-    subject_ids: list[int] = Field(default_factory=list)
+    module_ids: list[int] = Field(default_factory=list)
     days: int | None = None
     minutes_per_day: int | None = None
     priorities: str | None = None
 
 
 class QuizGenerationRequest(BaseModel):
-    subject_id: int | None = Field(default=None, gt=0)
+    module_id: int | None = Field(default=None, gt=0)
     material_id: int | None = Field(default=None, gt=0)
     question_count: int = Field(default=5, ge=1, le=20)
     topic: str | None = Field(default=None, max_length=500)
@@ -76,13 +76,13 @@ class QuizGenerationRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_single_source(self):
-        if (self.subject_id is None) == (self.material_id is None):
-            raise ValueError("Provide exactly one subject_id or material_id.")
+        if (self.module_id is None) == (self.material_id is None):
+            raise ValueError("Provide exactly one module_id or material_id.")
         return self
 
 
 class PracticeQuestionRequest(BaseModel):
-    subject_id: int | None = Field(default=None, gt=0)
+    module_id: int | None = Field(default=None, gt=0)
     material_id: int | None = Field(default=None, gt=0)
     topic: str | None = Field(default=None, max_length=500)
 
@@ -95,8 +95,8 @@ class PracticeQuestionRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_single_source(self):
-        if (self.subject_id is None) == (self.material_id is None):
-            raise ValueError("Provide exactly one subject_id or material_id.")
+        if (self.module_id is None) == (self.material_id is None):
+            raise ValueError("Provide exactly one module_id or material_id.")
         return self
 
 
@@ -143,5 +143,6 @@ class GeneratedQuizResponse(BaseModel):
 
 
 class SaveGeneratedQuizRequest(BaseModel):
-    subject_id: int = Field(gt=0)
+    module_id: int = Field(gt=0)
     quiz: GeneratedQuizResponse
+

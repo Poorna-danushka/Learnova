@@ -1,16 +1,19 @@
+﻿import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.note import Note
-from app.models.subject import Subject
+from app.models.module import Module
 from app.models.user import User
 from app.schemas.ai import NoteSummaryResponse
 from app.schemas.note import NoteCreate, NoteResponse, NoteUpdate
 from app.services.ai import AIConfigurationError, AIInputError, AIProviderError, summarize_note
 from app.services.ai_usage import AIUsageLimitError, execute_with_ai_usage
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 
@@ -21,13 +24,13 @@ def get_owned_note(note_id: int, user: User, db: Session) -> Note:
     return note
 
 
-def get_owned_subject(subject_id: int, user: User, db: Session) -> Subject:
-    subject = db.query(Subject).filter(
-        Subject.id == subject_id, Subject.owner_id == user.id
+def get_owned_module(module_id: int, user: User, db: Session) -> Module:
+    module = db.query(Module).filter(
+        Module.id == module_id, Module.owner_id == user.id
     ).first()
-    if subject is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
-    return subject
+    if module is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found.")
+    return module
 
 
 @router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
@@ -36,23 +39,35 @@ def create_note(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    get_owned_subject(data.subject_id, current_user, db)
-    note = Note(owner_id=current_user.id, **data.model_dump())
-    db.add(note)
-    db.commit()
-    db.refresh(note)
-    return note
+    try:
+        logger.info(f"Creating note for user {current_user.id}, module_id: {data.module_id}")
+        get_owned_module(data.module_id, current_user, db)
+        note = Note(owner_id=current_user.id, **data.model_dump())
+        db.add(note)
+        db.commit()
+        db.refresh(note)
+        logger.info(f"Note {note.id} created successfully")
+        return note
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error creating note for user {current_user.id}: {exc}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create note. Please try again."
+        ) from exc
 
 
 @router.get("", response_model=list[NoteResponse])
 def list_notes(
-    subject_id: int | None = None,
+    module_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     query = db.query(Note).filter(Note.owner_id == current_user.id)
-    if subject_id is not None:
-        query = query.filter(Note.subject_id == subject_id)
+    if module_id is not None:
+        query = query.filter(Note.module_id == module_id)
     return query.order_by(Note.updated_at.desc()).all()
 
 
@@ -103,15 +118,25 @@ def update_note(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    note = get_owned_note(note_id, current_user, db)
-    updates = data.model_dump(exclude_unset=True)
-    if "subject_id" in updates:
-        get_owned_subject(updates["subject_id"], current_user, db)
-    for field, value in updates.items():
-        setattr(note, field, value)
-    db.commit()
-    db.refresh(note)
-    return note
+    try:
+        note = get_owned_note(note_id, current_user, db)
+        updates = data.model_dump(exclude_unset=True)
+        if "module_id" in updates:
+            get_owned_module(updates["module_id"], current_user, db)
+        for field, value in updates.items():
+            setattr(note, field, value)
+        db.commit()
+        db.refresh(note)
+        return note
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error updating note {note_id}: {exc}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update note."
+        ) from exc
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -123,3 +148,4 @@ def delete_note(
     note = get_owned_note(note_id, current_user, db)
     db.delete(note)
     db.commit()
+

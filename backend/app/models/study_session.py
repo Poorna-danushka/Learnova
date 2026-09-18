@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
@@ -12,8 +12,8 @@ class StudySession(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    subject_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True, index=True
+    module_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("modules.id", ondelete="SET NULL"), nullable=True, index=True
     )
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -27,10 +27,11 @@ class StudyGoal(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    subject_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True, index=True
+    module_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("modules.id", ondelete="SET NULL"), nullable=True, index=True
     )
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     target_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
