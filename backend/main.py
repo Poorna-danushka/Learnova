@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -12,7 +13,7 @@ from app.routers import (
     auth,
     calendar,
     notes,
-    subjects,
+    modules,
     study_materials,
     study_planning,
     users,
@@ -21,6 +22,8 @@ from app.routers import (
     reminders,
     notification_history,
 )
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Create the FastAPI application instance
@@ -32,11 +35,13 @@ async def lifespan(_app: FastAPI):
     if REMINDER_SCHEDULER_ENABLED:
         scheduler = create_reminder_scheduler()
         scheduler.start()
+        logger.info("Reminder scheduler started")
     try:
         yield
     finally:
         if scheduler is not None:
             scheduler.shutdown(wait=False)
+            logger.info("Reminder scheduler stopped")
 
 
 app = FastAPI(
@@ -47,7 +52,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS â€” allow the Expo / React Native web dev server (and any future origin)
+# CORS — allow the Expo / React Native web dev server (and any future origin)
 # to call this API. In production, replace "*" with your actual domain(s).
 # ---------------------------------------------------------------------------
 app.add_middleware(
@@ -83,7 +88,8 @@ def health_check(db=Depends(get_db)):
         # Simple DB ping using raw text execution
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except Exception:
+    except Exception as exc:
+        logger.exception("Health check database ping failed")
         db_status = "disconnected"
 
     return {
@@ -101,10 +107,10 @@ def health_check(db=Depends(get_db)):
 #   GET  /users/test
 #   POST /users
 #
-# As we add more features (subjects, notes, study planner, quizzes, AI), we will add more routers here.
+# As we add more features (modules, notes, study planner, quizzes, AI), we will add more routers here.
 app.include_router(users.router)
 app.include_router(auth.router)
-app.include_router(subjects.router)
+app.include_router(modules.router)
 app.include_router(notes.router)
 app.include_router(study_materials.router)
 app.include_router(study_planning.router)
@@ -114,3 +120,5 @@ app.include_router(ai_conversations.router)
 app.include_router(notifications.router)
 app.include_router(reminders.router)
 app.include_router(notification_history.router)
+
+logger.info("Nexora API started successfully")
