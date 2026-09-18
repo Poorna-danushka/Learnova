@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,7 +6,7 @@ from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.quiz import Quiz, QuizQuestion, QuizAttempt
 from app.models.study_material import StudyMaterial
-from app.models.subject import Subject
+from app.models.module import Module
 from app.models.note import Note
 from app.models.user import User
 from app.schemas.ai import (
@@ -68,15 +68,15 @@ def save_generated_quiz(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    subject = db.query(Subject).filter(
-        Subject.id == data.subject_id,
-        Subject.owner_id == current_user.id,
+    subject = db.query(Module).filter(
+        Module.id == data.module_id,
+        Module.owner_id == current_user.id,
     ).first()
     if subject is None:
-        raise HTTPException(404, "Subject not found.")
+        raise HTTPException(404, "Module not found.")
     quiz = Quiz(
         owner_id=current_user.id,
-        subject_id=subject.id,
+        module_id=subject.id,
         title=data.quiz.title,
         description="Generated with AI",
     )
@@ -119,22 +119,22 @@ def _resolve_source_context(
         except AIInputError as exc:
             raise HTTPException(422, detail=str(exc)) from exc
 
-    subject = db.query(Subject).filter(
-        Subject.id == data.subject_id,
-        Subject.owner_id == current_user.id,
+    subject = db.query(Module).filter(
+        Module.id == data.module_id,
+        Module.owner_id == current_user.id,
     ).first()
     if subject is None:
-        raise HTTPException(404, "Subject not found.")
+        raise HTTPException(404, "Module not found.")
 
     # Collect all notes for this subject
     notes = db.query(Note).filter(
-        Note.subject_id == subject.id,
+        Note.module_id == subject.id,
         Note.owner_id == current_user.id,
     ).all()
 
     # Collect all study material text for this subject
     materials = db.query(StudyMaterial).filter(
-        StudyMaterial.subject_id == subject.id,
+        StudyMaterial.module_id == subject.id,
         StudyMaterial.owner_id == current_user.id,
     ).all()
 
@@ -234,9 +234,9 @@ def explain_owned_quiz_question(
 
 @router.post("", response_model=QuizResponse, status_code=201)
 def create_quiz(data: QuizCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    subject = db.query(Subject).filter(Subject.id == data.subject_id, Subject.owner_id == current_user.id).first()
+    subject = db.query(Module).filter(Module.id == data.module_id, Module.owner_id == current_user.id).first()
     if not subject:
-        raise HTTPException(404, "Subject not found.")
+        raise HTTPException(404, "Module not found.")
     quiz = Quiz(owner_id=current_user.id, **data.model_dump())
     db.add(quiz); db.commit(); db.refresh(quiz)
     return quiz

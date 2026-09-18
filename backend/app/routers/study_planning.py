@@ -1,10 +1,12 @@
+﻿import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.study_session import StudyGoal, StudySession
-from app.models.subject import Subject
+from app.models.module import Module
 from app.models.ai_study_plan import AIStudyPlan
 from app.models.user import User
 from app.schemas.ai import StudyPlanRequest, StudyPlanResponse
@@ -24,14 +26,15 @@ from app.services.ai import (
 )
 from app.services.ai_usage import AIUsageLimitError, execute_with_ai_usage
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["study planning"])
 
 
-def ensure_subject_owner(subject_id: int | None, user: User, db: Session) -> None:
-    if subject_id is not None and not db.query(Subject).filter(
-        Subject.id == subject_id, Subject.owner_id == user.id
+def ensure_module_owner(module_id: int | None, user: User, db: Session) -> None:
+    if module_id is not None and not db.query(Module).filter(
+        Module.id == module_id, Module.owner_id == user.id
     ).first():
-        raise HTTPException(status_code=404, detail="Subject not found.")
+        raise HTTPException(status_code=404, detail="Module not found.")
 
 
 def get_owned(model, item_id: int, user: User, db: Session):
@@ -47,11 +50,11 @@ def generate_plan(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    subjects = db.query(Subject).filter(Subject.owner_id == user.id)
-    if data.subject_ids:
-        subjects = subjects.filter(Subject.id.in_(data.subject_ids))
-    selected_subjects = subjects.order_by(Subject.name).all()
-    if data.subject_ids and len(selected_subjects) != len(data.subject_ids):
+    subjects = db.query(Module).filter(Module.owner_id == user.id)
+    if data.module_ids:
+        subjects = subjects.filter(Module.id.in_(data.module_ids))
+    selected_subjects = subjects.order_by(Module.name).all()  # FIXED: was Subject.name
+    if data.module_ids and len(selected_subjects) != len(data.module_ids):
         raise HTTPException(status_code=404, detail="Subject not found.")
 
     goals = db.query(StudyGoal).filter(
@@ -102,7 +105,7 @@ def generate_plan(
         owner_id=user.id,
         title=f"AI Study Plan ({data.days} days)",
         plan=plan,
-        subject_ids=data.subject_ids,
+        module_ids=data.module_ids,
         days=data.days,
         minutes_per_day=data.minutes_per_day,
         priorities=data.priorities,
@@ -156,12 +159,21 @@ def delete_saved_plan(
 
 @router.post("/study-sessions", response_model=StudySessionResponse, status_code=201)
 def create_session(data: StudySessionCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    ensure_subject_owner(data.subject_id, user, db)
-    item = StudySession(owner_id=user.id, **data.model_dump())
-    db.add(item)
-    db.commit()
-    db.refresh(item)
-    return item
+    try:
+        logger.info(f"Creating study session for user {user.id}, module_id: {data.module_id}")
+        ensure_module_owner(data.module_id, user, db)
+        item = StudySession(owner_id=user.id, **data.model_dump())
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        logger.info(f"Study session {item.id} created successfully")
+        return item
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error creating study session for user {user.id}: {exc}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create study session.") from exc
 
 
 @router.get("/study-sessions", response_model=list[StudySessionResponse])
@@ -171,14 +183,21 @@ def list_sessions(user: User = Depends(get_current_user), db: Session = Depends(
 
 @router.patch("/study-sessions/{session_id}", response_model=StudySessionResponse)
 def update_session(session_id: int, data: StudySessionUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    item = get_owned(StudySession, session_id, user, db)
-    updates = data.model_dump(exclude_unset=True)
-    ensure_subject_owner(updates.get("subject_id"), user, db)
-    for field, value in updates.items():
-        setattr(item, field, value)
-    db.commit()
-    db.refresh(item)
-    return item
+    try:
+        item = get_owned(StudySession, session_id, user, db)
+        updates = data.model_dump(exclude_unset=True)
+        ensure_module_owner(updates.get("module_id"), user, db)
+        for field, value in updates.items():
+            setattr(item, field, value)
+        db.commit()
+        db.refresh(item)
+        return item
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error updating study session {session_id}: {exc}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update study session.") from exc
 
 
 @router.delete("/study-sessions/{session_id}", status_code=204)
@@ -190,12 +209,21 @@ def delete_session(session_id: int, user: User = Depends(get_current_user), db: 
 
 @router.post("/study-goals", response_model=StudyGoalResponse, status_code=201)
 def create_goal(data: StudyGoalCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    ensure_subject_owner(data.subject_id, user, db)
-    item = StudyGoal(owner_id=user.id, **data.model_dump())
-    db.add(item)
-    db.commit()
-    db.refresh(item)
-    return item
+    try:
+        logger.info(f"Creating study goal for user {user.id}, module_id: {data.module_id}")
+        ensure_module_owner(data.module_id, user, db)
+        item = StudyGoal(owner_id=user.id, **data.model_dump())
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        logger.info(f"Study goal {item.id} created successfully")
+        return item
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error creating study goal for user {user.id}: {exc}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create study goal.") from exc
 
 
 @router.get("/study-goals", response_model=list[StudyGoalResponse])
@@ -205,14 +233,21 @@ def list_goals(user: User = Depends(get_current_user), db: Session = Depends(get
 
 @router.patch("/study-goals/{goal_id}", response_model=StudyGoalResponse)
 def update_goal(goal_id: int, data: StudyGoalUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    item = get_owned(StudyGoal, goal_id, user, db)
-    updates = data.model_dump(exclude_unset=True)
-    ensure_subject_owner(updates.get("subject_id"), user, db)
-    for field, value in updates.items():
-        setattr(item, field, value)
-    db.commit()
-    db.refresh(item)
-    return item
+    try:
+        item = get_owned(StudyGoal, goal_id, user, db)
+        updates = data.model_dump(exclude_unset=True)
+        ensure_module_owner(updates.get("module_id"), user, db)
+        for field, value in updates.items():
+            setattr(item, field, value)
+        db.commit()
+        db.refresh(item)
+        return item
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error updating study goal {goal_id}: {exc}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update study goal.") from exc
 
 
 @router.delete("/study-goals/{goal_id}", status_code=204)

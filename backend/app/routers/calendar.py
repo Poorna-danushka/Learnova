@@ -1,3 +1,5 @@
+﻿import logging
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.calendar_event import CalendarEvent
-from app.models.subject import Subject
+from app.models.module import Module
 from app.models.user import User
 from app.schemas.calendar import (
     CalendarEventCreate,
@@ -14,14 +16,15 @@ from app.schemas.calendar import (
     CalendarEventUpdate,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["calendar"])
 
 
-def ensure_subject_owner(subject_id: int | None, user: User, db: Session) -> None:
-    if subject_id is not None and not db.query(Subject).filter(
-        Subject.id == subject_id, Subject.owner_id == user.id
+def ensure_module_owner(module_id: int | None, user: User, db: Session) -> None:
+    if module_id is not None and not db.query(Module).filter(
+        Module.id == module_id, Module.owner_id == user.id
     ).first():
-        raise HTTPException(status_code=404, detail="Subject not found.")
+        raise HTTPException(status_code=404, detail="Module not found.")
 
 
 def get_owned_event(event_id: int, user: User, db: Session) -> CalendarEvent:
@@ -49,12 +52,24 @@ def create_event(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_subject_owner(data.subject_id, user, db)
-    event = CalendarEvent(owner_id=user.id, **data.model_dump())
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return event
+    try:
+        logger.info(f"Creating calendar event for user {user.id}, module_id: {data.module_id}")
+        ensure_module_owner(data.module_id, user, db)
+        event = CalendarEvent(owner_id=user.id, **data.model_dump())
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+        logger.info(f"Calendar event {event.id} created successfully")
+        return event
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error creating calendar event for user {user.id}: {exc}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create calendar event. Please try again."
+        ) from exc
 
 
 @router.get("/calendar-events", response_model=list[CalendarEventResponse])
@@ -85,15 +100,22 @@ def update_event(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    event = get_owned_event(event_id, user, db)
-    updates = data.model_dump(exclude_unset=True)
-    ensure_subject_owner(updates.get("subject_id"), user, db)
-    validate_update_times(event, updates)
-    for field, value in updates.items():
-        setattr(event, field, value)
-    db.commit()
-    db.refresh(event)
-    return event
+    try:
+        event = get_owned_event(event_id, user, db)
+        updates = data.model_dump(exclude_unset=True)
+        ensure_module_owner(updates.get("module_id"), user, db)
+        validate_update_times(event, updates)
+        for field, value in updates.items():
+            setattr(event, field, value)
+        db.commit()
+        db.refresh(event)
+        return event
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error updating calendar event {event_id}: {exc}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update calendar event.") from exc
 
 
 @router.delete("/calendar-events/{event_id}", status_code=204)
