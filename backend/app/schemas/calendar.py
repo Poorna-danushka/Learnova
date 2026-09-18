@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 class CalendarEventBase(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     description: Optional[str] = Field(default=None, max_length=2000)
-    subject_id: Optional[int] = Field(default=None, gt=0)
+    module_id: Optional[int] = Field(default=None, gt=0)
     starts_at: datetime
     ends_at: datetime
     all_day: bool = False
@@ -27,7 +27,7 @@ class CalendarEventCreate(CalendarEventBase):
 class CalendarEventUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=160)
     description: Optional[str] = Field(default=None, max_length=2000)
-    subject_id: Optional[int] = Field(default=None, gt=0)
+    module_id: Optional[int] = Field(default=None, gt=0)
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     all_day: Optional[bool] = None
@@ -40,3 +40,4 @@ class CalendarEventResponse(CalendarEventBase):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+

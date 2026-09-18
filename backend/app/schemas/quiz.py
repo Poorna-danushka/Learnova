@@ -1,10 +1,10 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class QuizCreate(BaseModel):
-    subject_id: int = Field(gt=0)
+    module_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=160)
     description: Optional[str] = Field(default=None, max_length=500)
 
@@ -57,10 +57,12 @@ class QuestionResponse(QuestionCreate):
 class QuizResponse(QuizCreate):
     id: int
     owner_id: int
+    module_id: int
     description: Optional[str]
     created_at: datetime
     updated_at: datetime
     questions: list[QuestionResponse] = Field(default_factory=list)
+    
     model_config = {"from_attributes": True}
 
 
@@ -86,3 +88,4 @@ class AttemptResponse(BaseModel):
     answers: dict[int, int]
     completed_at: datetime
     model_config = {"from_attributes": True}
+
