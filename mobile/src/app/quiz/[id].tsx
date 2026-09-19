@@ -260,7 +260,11 @@ export default function QuizScreen() {
   const selectedOption = answers[currentQuestion.id];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.root}>
+      <View style={styles.blobGreen} pointerEvents="none" />
+      <View style={styles.blobPink}  pointerEvents="none" />
+      <View style={styles.blobTeal}  pointerEvents="none" />
+      <SafeAreaView style={styles.safe}>
       {/* Quiz header */}
       <View style={styles.quizHeader}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
@@ -401,10 +405,14 @@ export default function QuizScreen() {
         )}
       </View>
     </SafeAreaView>
+    </View>
   );
 }
-
 const styles = StyleSheet.create({
+  root:      { flex: 1, backgroundColor: Colors.bg },
+  blobGreen: { position: 'absolute', top: -50,  left: -70,  width: 200, height: 200, borderRadius: 100, backgroundColor: '#16A34A12' },
+  blobPink:  { position: 'absolute', top: 140,  right: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: '#BE185D0E' },
+  blobTeal:  { position: 'absolute', bottom: 180, left: -60, width: 180, height: 180, borderRadius: 90,  backgroundColor: '#0EA5A00A' },
   safe: { flex: 1, backgroundColor: Colors.bg },
   scroll: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: Spacing['3xl'], gap: Spacing.xl },
   errorWrap: { padding: Spacing.xl, gap: Spacing.lg },

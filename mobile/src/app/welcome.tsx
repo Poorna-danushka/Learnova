@@ -2,73 +2,124 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
-  Dimensions,
   StatusBar,
+  Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, Typography, Radius } from '@/constants/theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Spacing, Typography, Radius, Shadow } from '@/constants/theme';
+import { LearnovaIcon } from '@/components/LearnovaIcon';
 
 const { width, height } = Dimensions.get('window');
 
-// Decorative floating card data
-const FLOAT_CARDS = [
-  { label: 'Database Systems', sub: '72% complete', color: '#6366F1', x: -20, y: 0, rotate: '-8deg' },
-  { label: 'Binary Search', sub: 'Note • 2h ago', color: '#8B5CF6', x: width - 180, y: 60, rotate: '6deg' },
-  { label: 'Quiz Results', sub: '9/10 · 90%', color: '#14B8A6', x: 20, y: 120, rotate: '5deg' },
-  { label: 'Study Session', sub: 'Tomorrow 10 AM', color: '#F59E0B', x: width - 190, y: 180, rotate: '-4deg' },
+// Preview cards that float in the upper half
+const PREVIEW_CARDS = [
+  { label: 'Data Structures', sub: '68% complete', color: Colors.subjectColors[0], x: -8, y: 10, rot: '-6deg' },
+  { label: 'Linear Algebra', sub: 'Note · 1h ago', color: Colors.subjectColors[1], x: width - 172, y: 70, rot: '5deg' },
+  { label: 'Quiz · 9/10', sub: '90% score', color: Colors.subjectColors[3], x: 16, y: 130, rot: '4deg' },
+  { label: 'Study Session', sub: 'Tomorrow 10 AM', color: Colors.subjectColors[4], x: width - 180, y: 190, rot: '-5deg' },
 ];
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const fade = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(40)).current;
-  const [cardAnims] = useState(() => FLOAT_CARDS.map(() => new Animated.Value(0)));
+  const slideUp = useRef(new Animated.Value(36)).current;
+  const floatY = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.85)).current;
+  const glowPulse = useRef(new Animated.Value(1)).current;
+  const [cardAnims] = useState(() => PREVIEW_CARDS.map(() => new Animated.Value(0)));
 
   useEffect(() => {
-    // Main content fade in
+    // Main entrance animations
     Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: Platform.OS !== 'web' }),
-      Animated.timing(slideUp, { toValue: 0, duration: 700, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(fade, { toValue: 1, duration: 650, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(slideUp, { toValue: 0, duration: 650, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.spring(logoScale, { 
+        toValue: 1, 
+        friction: 5, 
+        tension: 40, 
+        useNativeDriver: Platform.OS !== 'web' 
+      }),
     ]).start();
 
-    // Staggered card appearances
-    cardAnims.forEach((anim, i) => {
-      Animated.timing(anim, {
+    // Staggered card animations
+    PREVIEW_CARDS.forEach((_, i) => {
+      Animated.spring(cardAnims[i], {
         toValue: 1,
-        duration: 500,
-        delay: 300 + i * 150,
+        friction: 6,
+        tension: 40,
+        delay: 200 + i * 120,
         useNativeDriver: Platform.OS !== 'web',
       }).start();
     });
-  }, []);
 
-  // Gentle float animation
-  const floatY = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
+    // Continuous float animation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatY, { toValue: -8, duration: 2000, useNativeDriver: Platform.OS !== 'web' }),
-        Animated.timing(floatY, { toValue: 0, duration: 2000, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(floatY, { 
+          toValue: -7, 
+          duration: 2200, 
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: Platform.OS !== 'web' 
+        }),
+        Animated.timing(floatY, { 
+          toValue: 0, 
+          duration: 2200, 
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: Platform.OS !== 'web' 
+        }),
       ])
     ).start();
-  }, [floatY]);
+
+    // Glow pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, {
+          toValue: 1.15,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowPulse, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  }, []);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+    <View style={styles.root}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Background subtle radial glow */}
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
+      {/* Radial glow */}
+      <Animated.View 
+        style={[
+          styles.glowA, 
+          { transform: [{ scale: glowPulse }] }
+        ]} 
+        pointerEvents="none" 
+      />
+      <Animated.View 
+        style={[
+          styles.glowB, 
+          { transform: [{ scale: glowPulse }] }
+        ]} 
+        pointerEvents="none" 
+      />
 
       {/* Floating preview cards */}
-      <View style={[styles.floatingCards, styles.nonInteractive]}>
-        {FLOAT_CARDS.map((card, i) => (
+      <View style={styles.floatingArea} pointerEvents="none">
+        {PREVIEW_CARDS.map((card, i) => (
           <Animated.View
             key={i}
             style={[
@@ -76,110 +127,125 @@ export default function WelcomeScreen() {
               {
                 left: card.x,
                 top: card.y,
+                opacity: cardAnims[i],
                 transform: [
                   { translateY: floatY },
-                  { rotate: card.rotate },
+                  { rotate: card.rot },
+                  {
+                    scale: cardAnims[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.88, 1],
+                    }),
+                  },
                 ],
-                opacity: cardAnims[i],
               },
             ]}
           >
             <View style={[styles.floatDot, { backgroundColor: card.color }]} />
-            <View>
-              <Text style={styles.floatCardLabel}>{card.label}</Text>
-              <Text style={styles.floatCardSub}>{card.sub}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.floatLabel} numberOfLines={1}>{card.label}</Text>
+              <Text style={styles.floatSub}>{card.sub}</Text>
             </View>
           </Animated.View>
         ))}
       </View>
 
-      {/* Main content */}
-      <Animated.View
-        style={[styles.content, { opacity: fade, transform: [{ translateY: slideUp }] }]}
-      >
-        {/* Logo mark */}
-        <View style={styles.logoMark}>
-          <Text style={styles.logoN}>N</Text>
-        </View>
-        <Text style={styles.logoText}>nexora</Text>
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+        <Animated.View
+          style={[
+            styles.content,
+            { paddingBottom: Math.max(insets.bottom + Spacing.xl, Spacing['3xl']) },
+            { opacity: fade, transform: [{ translateY: slideUp }] },
+          ]}
+        >
+          {/* Logo */}
+          <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+            <LearnovaIcon size={80} />
+          </Animated.View>
 
-        {/* Hero copy */}
-        <View style={styles.hero}>
-          <Text style={styles.headline}>Your study life,{'\n'}organized.</Text>
-          <Text style={styles.subtext}>
-            Learn, plan, practice, and make{'\n'}progress — all in one place.
-          </Text>
-        </View>
+          {/* Hero text */}
+          <View style={styles.heroBlock}>
+            <Text style={styles.headline}>Your study life,{'\n'}organized.</Text>
+            <Text style={styles.subtext}>
+              Learn smarter. Plan better.{'\n'}Make real progress — every day.
+            </Text>
+          </View>
 
-        {/* CTAs */}
-        <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-            onPress={() => router.push('/onboarding')}
-            accessibilityRole="button"
-            accessibilityLabel="Get started"
-          >
-            <Text style={styles.primaryBtnText}>Get Started</Text>
-            <Text style={styles.arrowIcon}>→</Text>
-          </Pressable>
+          {/* CTAs */}
+          <View style={styles.ctaGroup}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+              onPress={() => router.push('/onboarding')}
+              accessibilityRole="button"
+              accessibilityLabel="Get started"
+            >
+              <Text style={styles.primaryBtnText}>Get Started</Text>
+              <View style={styles.arrowPill}>
+                <Text style={styles.arrowIcon}>→</Text>
+              </View>
+            </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
-            onPress={() => router.push('/auth')}
-            accessibilityRole="button"
-            accessibilityLabel="I already have an account"
-          >
-            <Text style={styles.secondaryBtnText}>I already have an account</Text>
-          </Pressable>
-        </View>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+              onPress={() => router.push('/auth')}
+              accessibilityRole="button"
+              accessibilityLabel="I already have an account"
+            >
+              <Text style={styles.secondaryBtnText}>I already have an account</Text>
+            </Pressable>
+          </View>
 
-        {/* Footer tagline */}
-        <View style={styles.taglineRow}>
-          <View style={styles.taglineDot} />
-          <Text style={styles.taglineText}>Learn</Text>
-          <View style={styles.taglineDot} />
-          <Text style={styles.taglineText}>Plan</Text>
-          <View style={styles.taglineDot} />
-          <Text style={styles.taglineText}>Practice</Text>
-          <View style={styles.taglineDot} />
-          <Text style={styles.taglineText}>Progress</Text>
-        </View>
-      </Animated.View>
-    </SafeAreaView>
+          {/* Tagline */}
+          <View style={styles.taglineRow}>
+            {['Learn', 'Plan', 'Practice', 'Progress'].map((w, i) => (
+              <View key={w} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                {i > 0 && <View style={styles.taglineDot} />}
+                <Text style={styles.taglineWord}>{w}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  root: { flex: 1, backgroundColor: Colors.bg },
 
-  glowTop: {
+  glowA: {
     position: 'absolute',
-    top: -100,
-    left: -80,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: Colors.primary + '18',
+    top: -80,
+    left: -60,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: Colors.primary + '20', // Enhanced glow opacity
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 60,
   },
-  glowBottom: {
-    position: 'absolute',
-    bottom: -60,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: Colors.primaryLight + '10',
-  },
-
-  floatingCards: {
+  glowB: {
     position: 'absolute',
     top: 80,
+    right: -80,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: Colors.accent + '18', // Enhanced glow opacity
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 50,
+  },
+
+  floatingArea: {
+    position: 'absolute',
+    top: 60,
     left: 0,
     right: 0,
-    height: 300,
-  },
-  nonInteractive: {
-    pointerEvents: 'none',
+    height: 320,
   },
   floatCard: {
     position: 'absolute',
@@ -187,82 +253,106 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: Radius.lg,
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    width: 160,
+    width: 164,
+    ...Shadow.sm,
   },
-  floatDot: { width: 8, height: 8, borderRadius: 4 },
-  floatCardLabel: { color: Colors.textPrimary, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
-  floatCardSub: { color: Colors.textMuted, fontSize: 10 },
+  floatDot:   { width: 9, height: 9, borderRadius: 4.5, flexShrink: 0 },
+  floatLabel: { color: Colors.textPrimary, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
+  floatSub:   { color: Colors.textMuted, fontSize: 10, marginTop: 1 },
 
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: height * 0.38,
-    paddingBottom: Spacing['2xl'],
     justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.xl,
     gap: Spacing['2xl'],
+    paddingTop: height * 0.42,
   },
 
+  logoGroup: { gap: 4 },
   logoMark: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: Radius.lg,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
   },
-  logoN: { color: Colors.white, fontSize: 24, fontWeight: Typography.weight.black },
+  logoN:    { color: Colors.white, fontSize: 22, fontWeight: Typography.weight.black },
   logoText: {
     color: Colors.textPrimary,
-    fontSize: Typography.size['2xl'],
+    fontSize: Typography.size.lg,
     fontWeight: Typography.weight.black,
-    letterSpacing: 1,
-    marginTop: -Spacing.base,
+    letterSpacing: 1.5,
   },
 
-  hero: { gap: Spacing.md },
+  heroBlock: { gap: Spacing.md },
   headline: {
     color: Colors.textPrimary,
     fontSize: Typography.size['4xl'],
     fontWeight: Typography.weight.black,
     letterSpacing: Typography.tracking.tight,
-    lineHeight: 42,
+    lineHeight: 40,
   },
   subtext: {
     color: Colors.textMuted,
     fontSize: Typography.size.base,
-    lineHeight: 24,
+    lineHeight: 26,
   },
 
-  actions: { gap: Spacing.md },
+  ctaGroup: { gap: Spacing.md },
   primaryBtn: {
     height: 56,
     backgroundColor: Colors.primary,
     borderRadius: Radius.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+    ...Shadow.glow,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  primaryBtnText: { color: Colors.white, fontSize: Typography.size.md, fontWeight: Typography.weight.black },
-  arrowIcon: { color: Colors.white, fontSize: Typography.size.lg, marginTop: 1 },
-  secondaryBtn: {
-    height: 52,
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  primaryBtnText: {
+    flex: 1,
+    color: Colors.white,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.black,
+  },
+  arrowPill: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  secondaryBtnText: { color: Colors.textSecondary, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.975 }] },
+  arrowIcon: { color: Colors.white, fontSize: Typography.size.base, fontWeight: Typography.weight.bold },
+
+  secondaryBtn: {
+    height: 52,
+    backgroundColor: Colors.accentSubtle, // Subtle purple background
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.accentMuted, // Purple border
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    color: Colors.accent, // Purple text
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+  },
+  pressed: { opacity: 0.76, transform: [{ scale: 0.974 }] },
 
   taglineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  taglineDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.textMuted },
-  taglineText: { color: Colors.textMuted, fontSize: Typography.size.xs, fontWeight: Typography.weight.medium, letterSpacing: 0.5 },
+  taglineDot:  { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.textMuted + '60' },
+  taglineWord: { color: Colors.textMuted, fontSize: Typography.size.xs, fontWeight: Typography.weight.medium, letterSpacing: 0.4 },
 });

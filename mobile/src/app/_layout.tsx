@@ -13,7 +13,7 @@ import {
 
 SplashScreen.preventAutoHideAsync();
 
-const ONBOARDING_KEY = 'nexora.onboarding_done';
+const ONBOARDING_KEY = 'learnova.onboarding_done';
 
 async function getOnboardingDone(): Promise<boolean> {
   if (Platform.OS === 'web') {
@@ -41,7 +41,7 @@ function RootLayoutNav() {
       router.push('/planning');
       return;
     }
-    router.push('/');
+    router.push('/(tabs)');
   }), [router]);
 
   // Load onboarding flag once
@@ -64,7 +64,7 @@ function RootLayoutNav() {
       // Only navigate to home on first resolution (loading→authenticated) or
       // after a login (unauthenticated→authenticated). Never re-run if already there.
       if (prev === 'loading' || prev === 'unauthenticated') {
-        router.replace('/');
+        router.replace('/(tabs)');
       }
     } else {
       // Token cleared — always redirect to auth entry point
@@ -115,9 +115,11 @@ function RootLayoutNav() {
 
       {/* Feature screens */}
       <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="subjects" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="subjects/[id]" options={{ animation: 'slide_from_right' }} />
+
+      <Stack.Screen name="modules" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="modules/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="notes" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="notes/new" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="notes/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="materials" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="planning" options={{ animation: 'slide_from_right' }} />

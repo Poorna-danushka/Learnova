@@ -1,5 +1,5 @@
-// ─── Nexora UI Component Library ─────────────────────────────────────────────
-// All reusable primitive UI components for the Nexora mobile app.
+// ─── Learnova UI Component Library ───────────────────────────────────────────
+// All reusable primitive UI components for the Learnova mobile app.
 // Import from '@/components/ui' throughout the app.
 
 import React, { useEffect, useRef } from 'react';
@@ -41,14 +41,16 @@ export function Screen({
   children,
   scroll = true,
   style,
+  contentStyle,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   style?: ViewStyle;
+  contentStyle?: ViewStyle;
 }) {
-  const content = <View style={[styles.content, style]}>{children}</View>;
+  const content = <View style={[styles.content, contentStyle]}>{children}</View>;
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, style]} edges={['top', 'left', 'right']}>
       {scroll ? (
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -65,9 +67,15 @@ export function Screen({
 }
 
 // ─── Keyboard Aware Screen ────────────────────────────────────────────────────
-export function KeyboardScreen({ children }: { children: React.ReactNode }) {
+export function KeyboardScreen({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: ViewStyle;
+}) {
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, style]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -99,21 +107,25 @@ export function Header({
 }) {
   return (
     <View style={styles.header}>
-      <View style={styles.headerTop}>
-        {onBack && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={onBack}
-            hitSlop={12}
-            style={styles.backBtn}
-          >
-            <Text style={styles.backIcon}>‹</Text>
-            <Text style={styles.backLabel}>Back</Text>
-          </Pressable>
-        )}
-        {right && <View style={styles.headerRight}>{right}</View>}
-      </View>
+      {(onBack || right) && (
+        <View style={styles.headerTop}>
+          {onBack ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              onPress={onBack}
+              hitSlop={12}
+              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={styles.backChevron}>←</Text>
+              <Text style={styles.backLabel}>Back</Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+          {right && <View style={styles.headerRight}>{right}</View>}
+        </View>
+      )}
       <Text style={styles.headerTitle}>{title}</Text>
       {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
     </View>
@@ -126,23 +138,34 @@ export function ScreenHeader({
   onBack,
   action,
   onAction,
+  subtitle,
 }: {
   title: string;
   onBack?: () => void;
   action?: React.ReactNode;
   onAction?: () => void;
+  subtitle?: string;
 }) {
   return (
-    <View style={styles.screenHeader}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+    <View style={styles.screenHeaderWrap}>
+      <View style={styles.screenHeaderRow}>
         {onBack && (
-          <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Go back">
-            <Text style={styles.backIcon}>‹</Text>
+          <Pressable
+            onPress={onBack}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={({ pressed }) => [styles.screenHeaderBack, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={styles.backChevron}>←</Text>
           </Pressable>
         )}
-        <Text style={styles.screenHeaderTitle}>{title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.screenHeaderTitle}>{title}</Text>
+          {subtitle ? <Text style={styles.screenHeaderSub}>{subtitle}</Text> : null}
+        </View>
+        {action && <View>{action}</View>}
       </View>
-      {action && <View>{action}</View>}
     </View>
   );
 }
@@ -162,7 +185,12 @@ export function Card({
   if (onPress) {
     return (
       <Pressable
-        style={({ pressed }) => [styles.card, noPadding && { padding: 0 }, style, pressed && styles.cardPressed]}
+        style={({ pressed }) => [
+          styles.card,
+          noPadding && { padding: 0 },
+          style,
+          pressed && styles.cardPressed,
+        ]}
         onPress={onPress}
         accessibilityRole="button"
       >
@@ -185,7 +213,7 @@ export function Surface({
 }
 
 // ─── Button ───────────────────────────────────────────────────────────────────
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 
 export function Button({
   label,
@@ -195,6 +223,7 @@ export function Button({
   loading = false,
   size = 'md',
   icon,
+  fullWidth = true,
 }: {
   label: string;
   onPress: () => void;
@@ -203,12 +232,14 @@ export function Button({
   loading?: boolean;
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
+  fullWidth?: boolean;
 }) {
   const variantStyle = {
     primary: styles.btnPrimary,
     secondary: styles.btnSecondary,
     ghost: styles.btnGhost,
     danger: styles.btnDanger,
+    success: styles.btnSuccess,
   }[variant];
 
   const textStyle = {
@@ -216,6 +247,7 @@ export function Button({
     secondary: styles.btnTextSecondary,
     ghost: styles.btnTextGhost,
     danger: styles.btnTextDanger,
+    success: styles.btnTextSuccess,
   }[variant];
 
   const sizeStyle = {
@@ -223,6 +255,8 @@ export function Button({
     md: styles.btnMd,
     lg: styles.btnLg,
   }[size];
+
+  const loaderColor = variant === 'primary' || variant === 'success' ? Colors.white : Colors.primaryLight;
 
   return (
     <Pressable
@@ -234,15 +268,16 @@ export function Button({
         styles.btn,
         variantStyle,
         sizeStyle,
+        !fullWidth && styles.btnInline,
         (disabled || loading) && styles.btnDisabled,
         pressed && styles.btnPressed,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : Colors.primaryLight} size="small" />
+        <ActivityIndicator color={loaderColor} size="small" />
       ) : (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-          {icon && icon}
+        <View style={styles.btnInner}>
+          {icon && <View style={styles.btnIconSlot}>{icon}</View>}
           <Text style={[styles.btnText, textStyle]}>{label}</Text>
         </View>
       )}
@@ -256,11 +291,15 @@ export function IconButton({
   onPress,
   accessibilityLabel,
   variant = 'ghost',
+  size = 40,
+  color,
 }: {
   children: React.ReactNode;
   onPress: () => void;
   accessibilityLabel: string;
-  variant?: 'ghost' | 'filled';
+  variant?: 'ghost' | 'filled' | 'danger';
+  size?: number;
+  color?: string;
 }) {
   return (
     <Pressable
@@ -270,7 +309,10 @@ export function IconButton({
       hitSlop={8}
       style={({ pressed }) => [
         styles.iconBtn,
+        { width: size, height: size, borderRadius: size / 2 },
         variant === 'filled' && styles.iconBtnFilled,
+        variant === 'danger' && styles.iconBtnDanger,
+        color ? { backgroundColor: color + '22', borderColor: color + '44' } : {},
         pressed && styles.btnPressed,
       ]}
     >
@@ -284,24 +326,47 @@ export function Field({
   label,
   error,
   hint,
+  required,
   ...props
-}: TextInputProps & { label?: string; error?: string; hint?: string }) {
+}: TextInputProps & { label?: string; error?: string; hint?: string; required?: boolean }) {
+  const isFocused = useRef(false);
+  const [focused, setFocused] = React.useState(false);
+
   return (
     <View style={styles.field}>
-      {label && <Text style={styles.fieldLabel}>{label}</Text>}
+      {label && (
+        <View style={styles.fieldLabelRow}>
+          <Text style={styles.fieldLabel}>{label}</Text>
+          {required && <Text style={styles.fieldRequired}>*</Text>}
+        </View>
+      )}
       <TextInput
         {...props}
         accessibilityLabel={label}
         placeholderTextColor={Colors.textMuted}
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
         style={[
           styles.input,
           props.multiline && styles.inputMultiline,
+          focused && styles.inputFocused,
           error && styles.inputError,
           props.style as any,
         ]}
       />
       {hint && !error && <Text style={styles.fieldHint}>{hint}</Text>}
-      {error && <Text style={styles.fieldError}>{error}</Text>}
+      {error && (
+        <View style={styles.fieldErrorRow}>
+          <Text style={styles.fieldErrorDot}>●</Text>
+          <Text style={styles.fieldError}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -321,10 +386,12 @@ export function PasswordField({
   placeholder?: string;
 }) {
   const [visible, setVisible] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.passwordRow}>
+      <View style={[styles.passwordWrap, focused && styles.inputFocused, error && styles.inputError]}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -333,7 +400,9 @@ export function PasswordField({
           placeholder={placeholder}
           placeholderTextColor={Colors.textMuted}
           accessibilityLabel={label}
-          style={[styles.input, styles.passwordInput, error && styles.inputError]}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={styles.passwordInput}
         />
         <Pressable
           onPress={() => setVisible((v) => !v)}
@@ -344,7 +413,12 @@ export function PasswordField({
           <Text style={styles.eyeIcon}>{visible ? '◎' : '○'}</Text>
         </Pressable>
       </View>
-      {error && <Text style={styles.fieldError}>{error}</Text>}
+      {error && (
+        <View style={styles.fieldErrorRow}>
+          <Text style={styles.fieldErrorDot}>●</Text>
+          <Text style={styles.fieldError}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -361,8 +435,10 @@ export function SearchInput({
   placeholder?: string;
   onClear?: () => void;
 }) {
+  const [focused, setFocused] = React.useState(false);
+
   return (
-    <View style={styles.searchRow}>
+    <View style={[styles.searchRow, focused && styles.searchFocused]}>
       <Text style={styles.searchIcon}>⌕</Text>
       <TextInput
         value={value}
@@ -374,9 +450,15 @@ export function SearchInput({
         autoCapitalize="none"
         accessibilityLabel={placeholder}
         returnKeyType="search"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
       />
       {value.length > 0 && (
-        <Pressable onPress={onClear || (() => onChangeText(''))} hitSlop={8}>
+        <Pressable
+          onPress={onClear || (() => onChangeText(''))}
+          hitSlop={8}
+          style={styles.searchClearBtn}
+        >
           <Text style={styles.searchClear}>✕</Text>
         </Pressable>
       )}
@@ -390,22 +472,43 @@ export function Chip({
   active,
   onPress,
   color,
+  count,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
   color?: string;
+  count?: number;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && [styles.chipActive, color ? { backgroundColor: color + '22', borderColor: color } : {}]]}
+      style={({ pressed }) => [
+        styles.chip,
+        active && [
+          styles.chipActive,
+          color ? { backgroundColor: color + '20', borderColor: color + '60' } : {},
+        ],
+        pressed && { opacity: 0.7 },
+      ]}
     >
-      <Text style={[styles.chipText, active && [styles.chipTextActive, color ? { color } : {}]]}>
+      <Text
+        style={[
+          styles.chipText,
+          active && [styles.chipTextActive, color ? { color } : {}],
+        ]}
+      >
         {label}
       </Text>
+      {count !== undefined && (
+        <View style={[styles.chipCount, active && styles.chipCountActive]}>
+          <Text style={[styles.chipCountText, active && styles.chipCountTextActive]}>
+            {count}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -414,15 +517,33 @@ export function Chip({
 export function Badge({
   label,
   color = Colors.primary,
-  textColor = Colors.textPrimary,
+  size = 'sm',
 }: {
   label: string;
   color?: string;
-  textColor?: string;
+  size?: 'xs' | 'sm' | 'md';
 }) {
+  const sizeStyle = {
+    xs: styles.badgeXs,
+    sm: styles.badgeSm,
+    md: styles.badgeMd,
+  }[size];
+
+  const textSize = {
+    xs: styles.badgeTextXs,
+    sm: styles.badgeTextSm,
+    md: styles.badgeTextMd,
+  }[size];
+
   return (
-    <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color + '44' }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+    <View
+      style={[
+        styles.badge,
+        sizeStyle,
+        { backgroundColor: color + '18', borderColor: color + '40' },
+      ]}
+    >
+      <Text style={[styles.badgeText, textSize, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -451,12 +572,19 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color + '30',
-          borderColor: color + '60',
+          backgroundColor: color + '25',
+          borderColor: color + '50',
         },
       ]}
     >
-      <Text style={[styles.avatarText, { fontSize: size * 0.38, color }]}>{initials}</Text>
+      <Text
+        style={[
+          styles.avatarText,
+          { fontSize: size * 0.36, color, letterSpacing: size * 0.015 },
+        ]}
+      >
+        {initials}
+      </Text>
     </View>
   );
 }
@@ -465,23 +593,33 @@ export function Avatar({
 export function ProgressBar({
   progress,
   color = Colors.primary,
-  height = 6,
+  height = 5,
   style,
+  showLabel,
 }: {
   progress: number;
   color?: string;
   height?: number;
   style?: ViewStyle;
+  showLabel?: boolean;
 }) {
   const clampedProgress = Math.min(100, Math.max(0, progress));
   return (
-    <View style={[styles.progressTrack, { height }, style]}>
-      <View
-        style={[
-          styles.progressFill,
-          { width: `${clampedProgress}%`, backgroundColor: color, height },
-        ]}
-      />
+    <View style={[{ gap: 4 }, style]}>
+      {showLabel && (
+        <View style={styles.progressLabelRow}>
+          <Text style={styles.progressLabel}>Progress</Text>
+          <Text style={[styles.progressValue, { color }]}>{clampedProgress}%</Text>
+        </View>
+      )}
+      <View style={[styles.progressTrack, { height }]}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${clampedProgress}%`, backgroundColor: color, height },
+          ]}
+        />
+      </View>
     </View>
   );
 }
@@ -491,13 +629,16 @@ export function StatCard({
   value,
   label,
   color = Colors.primaryLight,
+  icon,
 }: {
   value: string | number;
   label: string;
   color?: string;
+  icon?: string;
 }) {
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { borderColor: color + '25' }]}>
+      {icon && <Text style={[styles.statIcon, { color }]}>{icon}</Text>}
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -518,8 +659,13 @@ export function SectionHeading({
     <View style={styles.sectionRow}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {action && (
-        <Pressable onPress={onAction} accessibilityRole="button">
-          <Text style={styles.sectionAction}>{action}</Text>
+        <Pressable
+          onPress={onAction}
+          accessibilityRole="button"
+          hitSlop={8}
+          style={({ pressed }) => pressed && { opacity: 0.6 }}
+        >
+          <Text style={styles.sectionAction}>{action} →</Text>
         </Pressable>
       )}
     </View>
@@ -527,7 +673,16 @@ export function SectionHeading({
 }
 
 // ─── Divider ─────────────────────────────────────────────────────────────────
-export function Divider({ style }: { style?: ViewStyle }) {
+export function Divider({ style, label }: { style?: ViewStyle; label?: string }) {
+  if (label) {
+    return (
+      <View style={[styles.dividerRow, style]}>
+        <View style={styles.divider} />
+        <Text style={styles.dividerLabel}>{label}</Text>
+        <View style={styles.divider} />
+      </View>
+    );
+  }
   return <View style={[styles.divider, style]} />;
 }
 
@@ -535,20 +690,28 @@ export function Divider({ style }: { style?: ViewStyle }) {
 export function Message({
   children,
   tone = 'error',
+  onDismiss,
 }: {
   children: React.ReactNode;
   tone?: 'error' | 'success' | 'warning' | 'info';
+  onDismiss?: () => void;
 }) {
   const toneStyles = {
-    error:   { bg: Colors.errorMuted,   border: Colors.error + '60',   text: '#FCA5A5' },
-    success: { bg: Colors.successMuted, border: Colors.success + '60', text: '#86EFAC' },
-    warning: { bg: Colors.warningMuted, border: Colors.warning + '60', text: '#FCD34D' },
-    info:    { bg: Colors.infoMuted,    border: Colors.info + '60',    text: '#7DD3FC' },
+    error:   { bg: Colors.errorMuted,   border: Colors.error + '50',   text: Colors.errorLight,   icon: '⚠' },
+    success: { bg: Colors.successMuted, border: Colors.success + '50', text: Colors.successLight,  icon: '✓' },
+    warning: { bg: Colors.warningMuted, border: Colors.warning + '50', text: Colors.warningLight,  icon: '⚠' },
+    info:    { bg: Colors.infoMuted,    border: Colors.info + '50',    text: Colors.infoLight,     icon: 'ℹ' },
   }[tone];
 
   return (
     <View style={[styles.message, { backgroundColor: toneStyles.bg, borderColor: toneStyles.border }]}>
+      <Text style={[styles.messageIcon, { color: toneStyles.text }]}>{toneStyles.icon}</Text>
       <Text style={[styles.messageText, { color: toneStyles.text }]}>{children}</Text>
+      {onDismiss && (
+        <Pressable onPress={onDismiss} hitSlop={8} style={styles.messageDismiss}>
+          <Text style={[styles.messageDismissText, { color: toneStyles.text }]}>✕</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -572,10 +735,12 @@ export function EmptyState({
       <View style={styles.emptyIconWrap}>
         <Text style={styles.emptyIcon}>{icon}</Text>
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {text && <Text style={styles.emptyText}>{text}</Text>}
+      <View style={styles.emptyTextGroup}>
+        <Text style={styles.emptyTitle}>{title}</Text>
+        {text && <Text style={styles.emptyText}>{text}</Text>}
+      </View>
       {action && onAction && (
-        <Button label={action} onPress={onAction} variant="secondary" size="sm" />
+        <Button label={action} onPress={onAction} variant="secondary" size="sm" fullWidth={false} />
       )}
     </View>
   );
@@ -583,7 +748,7 @@ export function EmptyState({
 
 // ─── Error State ──────────────────────────────────────────────────────────────
 export function ErrorState({
-  title = "Something went wrong",
+  title = 'Something went wrong',
   text,
   onRetry,
 }: {
@@ -593,12 +758,16 @@ export function ErrorState({
 }) {
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: Colors.errorMuted }]}>
+      <View style={[styles.emptyIconWrap, { backgroundColor: Colors.errorMuted, borderColor: Colors.error + '30' }]}>
         <Text style={[styles.emptyIcon, { color: Colors.error }]}>!</Text>
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {text && <Text style={styles.emptyText}>{text}</Text>}
-      {onRetry && <Button label="Try again" onPress={onRetry} variant="secondary" size="sm" />}
+      <View style={styles.emptyTextGroup}>
+        <Text style={styles.emptyTitle}>{title}</Text>
+        {text && <Text style={styles.emptyText}>{text}</Text>}
+      </View>
+      {onRetry && (
+        <Button label="Try again" onPress={onRetry} variant="secondary" size="sm" fullWidth={false} />
+      )}
     </View>
   );
 }
@@ -608,7 +777,7 @@ export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   return (
     <View style={styles.loadingState}>
       <ActivityIndicator color={Colors.primaryLight} size="large" />
-      <Text style={styles.loadingLabel}>{label}</Text>
+      {label && <Text style={styles.loadingLabel}>{label}</Text>}
     </View>
   );
 }
@@ -618,18 +787,28 @@ export function SkeletonLine({
   width = '100%',
   height = 16,
   style,
+  borderRadius,
 }: {
   width?: string | number;
   height?: number;
   style?: ViewStyle;
+  borderRadius?: number;
 }) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const opacity = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.8, duration: 700, useNativeDriver: Platform.OS !== 'web' }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(opacity, {
+          toValue: 0.75,
+          duration: 750,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.35,
+          duration: 750,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
       ])
     );
     anim.start();
@@ -640,19 +819,35 @@ export function SkeletonLine({
     <Animated.View
       style={[
         styles.skeleton,
-        { width: width as any, height, opacity },
+        { width: width as any, height, opacity, borderRadius: borderRadius ?? Radius.sm },
         style,
       ]}
     />
   );
 }
 
-export function SkeletonCard() {
+export function SkeletonCard({ height, style }: { height?: number; style?: ViewStyle } = {}) {
   return (
-    <View style={styles.skeletonCard}>
-      <SkeletonLine width="60%" height={18} />
-      <SkeletonLine width="40%" height={13} />
-      <SkeletonLine width="100%" height={8} style={{ borderRadius: Radius.full }} />
+    <View style={[styles.skeletonCard, height !== undefined && { height }, style]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+        <SkeletonLine width={40} height={40} borderRadius={Radius.md} />
+        <View style={{ flex: 1, gap: Spacing.xs }}>
+          <SkeletonLine width="65%" height={16} />
+          <SkeletonLine width="40%" height={12} />
+        </View>
+      </View>
+      <SkeletonLine width="100%" height={6} borderRadius={Radius.full} />
+    </View>
+  );
+}
+
+export function SkeletonText({ lines = 3 }: { lines?: number }) {
+  const widths = ['100%', '85%', '70%', '90%', '60%'];
+  return (
+    <View style={{ gap: Spacing.sm }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <SkeletonLine key={i} width={widths[i % widths.length]} height={14} />
+      ))}
     </View>
   );
 }
@@ -675,9 +870,17 @@ export function SegmentedControl({
           onPress={() => onSelect(opt)}
           accessibilityRole="button"
           accessibilityState={{ selected: selected === opt }}
-          style={[styles.segmentItem, selected === opt && styles.segmentActive]}
+          style={[
+            styles.segmentItem,
+            selected === opt && styles.segmentActive,
+          ]}
         >
-          <Text style={[styles.segmentText, selected === opt && styles.segmentTextActive]}>
+          <Text
+            style={[
+              styles.segmentText,
+              selected === opt && styles.segmentTextActive,
+            ]}
+          >
             {opt}
           </Text>
         </Pressable>
@@ -686,13 +889,86 @@ export function SegmentedControl({
   );
 }
 
+// ─── List Row ─────────────────────────────────────────────────────────────────
+export function ListRow({
+  label,
+  value,
+  icon,
+  onPress,
+  destructive,
+  right,
+  subtitle,
+}: {
+  label: string;
+  value?: string;
+  icon?: string;
+  onPress?: () => void;
+  destructive?: boolean;
+  right?: React.ReactNode;
+  subtitle?: string;
+}) {
+  const labelColor = destructive ? Colors.error : Colors.textPrimary;
+
+  const inner = (
+    <>
+      {icon && (
+        <View
+          style={[
+            styles.listRowIcon,
+            {
+              backgroundColor: destructive
+                ? Colors.errorMuted
+                : Colors.surfaceElevated,
+              borderColor: destructive ? Colors.error + '30' : Colors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.listRowIconText,
+              { color: destructive ? Colors.error : Colors.primaryLight },
+            ]}
+          >
+            {icon}
+          </Text>
+        </View>
+      )}
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.listRowLabel, { color: labelColor }]}>{label}</Text>
+        {subtitle && <Text style={styles.listRowSubtitle}>{subtitle}</Text>}
+      </View>
+      {right ? (
+        right
+      ) : value ? (
+        <Text style={styles.listRowValue}>{value}</Text>
+      ) : onPress ? (
+        <Text style={styles.listRowChevron}>›</Text>
+      ) : null}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.listRow, pressed && { opacity: 0.65 }]}
+        accessibilityRole="button"
+      >
+        {inner}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.listRow}>{inner}</View>;
+}
+
 // ─── Bottom Navigation ────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { label: 'Home',     route: '/',         icon: '⌂',  iconActive: '⌂'  },
-  { label: 'Subjects', route: '/subjects',  icon: '▤',  iconActive: '▤'  },
-  { label: 'Planner',  route: '/planning',  icon: '◷',  iconActive: '◷'  },
-  { label: 'Notes',    route: '/notes',     icon: '✎',  iconActive: '✎'  },
-  { label: 'Profile',  route: '/profile',   icon: '◉',  iconActive: '◉'  },
+  { label: 'Home',    route: '/(tabs)',   icon: '⌂'  },
+  { label: 'Modules', route: '/modules',  icon: '▤'  },
+  { label: 'Planner', route: '/planning', icon: '◷'  },
+  { label: 'Notes',   route: '/notes',    icon: '✎'  },
+  { label: 'Profile', route: '/profile',  icon: '◉'  },
 ] as const;
 
 export function BottomNav({
@@ -705,24 +981,177 @@ export function BottomNav({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.nav, { bottom: Math.max(Spacing.base, insets.bottom + Spacing.xs) }]}>
-      {NAV_ITEMS.map(({ label, route, icon, iconActive }) => {
+    <View
+      style={[
+        styles.nav,
+        { bottom: Math.max(Spacing.base, insets.bottom + Spacing.xs) },
+      ]}
+    >
+      {NAV_ITEMS.map(({ label, route, icon }) => {
         const isActive = active === label;
         return (
           <Pressable
             key={label}
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${label}`}
+            accessibilityRole="tab"
+            accessibilityLabel={label}
             accessibilityState={{ selected: isActive }}
-            style={styles.navItem}
+            style={({ pressed }) => [
+              styles.navItem,
+              pressed && !isActive && { opacity: 0.6 },
+            ]}
             onPress={() => onNavigate(route)}
           >
-            {isActive && <View style={styles.navIndicator} />}
-            <Text style={[styles.navIcon, isActive && styles.navIconActive]}>
-              {isActive ? iconActive : icon}
+            {isActive && <View style={styles.navActiveBar} />}
+            <View
+              style={[
+                styles.navIconWrap,
+                isActive && styles.navIconWrapActive,
+              ]}
+            >
+              <Text style={[styles.navIcon, isActive && styles.navIconActive]}>
+                {icon}
+              </Text>
+            </View>
+            <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+              {label}
             </Text>
-            <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{label}</Text>
           </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── Confirm Dialog (cross-platform) ─────────────────────────────────────────
+export function InlineConfirm({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmLabel = 'Delete',
+  variant = 'danger',
+}: {
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmLabel?: string;
+  variant?: 'danger' | 'primary';
+}) {
+  return (
+    <View style={styles.confirmWrap}>
+      <Text style={styles.confirmTitle}>{title}</Text>
+      <Text style={styles.confirmMessage}>{message}</Text>
+      <View style={styles.confirmActions}>
+        <Button label="Cancel" onPress={onCancel} variant="ghost" size="sm" fullWidth={false} />
+        <Button label={confirmLabel} onPress={onConfirm} variant={variant === 'danger' ? 'danger' : 'primary'} size="sm" fullWidth={false} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Tag / Pill ───────────────────────────────────────────────────────────────
+export function Tag({
+  label,
+  color,
+  onRemove,
+}: {
+  label: string;
+  color?: string;
+  onRemove?: () => void;
+}) {
+  const tagColor = color || Colors.primaryLight;
+  return (
+    <View style={[styles.tag, { backgroundColor: tagColor + '18', borderColor: tagColor + '35' }]}>
+      <Text style={[styles.tagText, { color: tagColor }]}>{label}</Text>
+      {onRemove && (
+        <Pressable onPress={onRemove} hitSlop={4} style={styles.tagRemove}>
+          <Text style={[styles.tagRemoveText, { color: tagColor }]}>✕</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+// ─── Floating Action Button ───────────────────────────────────────────────────
+export function FAB({
+  onPress,
+  label,
+  icon = '+',
+}: {
+  onPress: () => void;
+  label?: string;
+  icon?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label || 'Add'}
+      style={({ pressed }) => [
+        styles.fab,
+        pressed && { opacity: 0.85, transform: [{ scale: 0.95 }] },
+      ]}
+    >
+      <Text style={styles.fabIcon}>{icon}</Text>
+      {label && <Text style={styles.fabLabel}>{label}</Text>}
+    </Pressable>
+  );
+}
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+export function StepIndicator({
+  steps,
+  current,
+}: {
+  steps: string[];
+  current: number;
+}) {
+  return (
+    <View style={styles.stepRow}>
+      {steps.map((label, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <View key={label} style={styles.stepItem}>
+            <View
+              style={[
+                styles.stepCircle,
+                done && styles.stepCircleDone,
+                active && styles.stepCircleActive,
+              ]}
+            >
+              {done ? (
+                <Text style={styles.stepCheckmark}>✓</Text>
+              ) : (
+                <Text
+                  style={[
+                    styles.stepNum,
+                    active && styles.stepNumActive,
+                  ]}
+                >
+                  {i + 1}
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.stepLabel,
+                active && styles.stepLabelActive,
+                done && styles.stepLabelDone,
+              ]}
+            >
+              {label}
+            </Text>
+            {i < steps.length - 1 && (
+              <View
+                style={[
+                  styles.stepConnector,
+                  (done || (active && i < current)) && styles.stepConnectorDone,
+                ]}
+              />
+            )}
+          </View>
         );
       })}
     </View>
@@ -731,156 +1160,456 @@ export function BottomNav({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // Screen
+  // ── Screen ──────────────────────────────────────────────────────────────────
   safe:    { flex: 1, backgroundColor: Colors.bg },
-  scroll:  { paddingBottom: 120 },
-  content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, gap: Spacing.lg },
+  scroll:  { paddingBottom: 132 },
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    gap: Spacing.xl,
+  },
 
-  // Header
-  header:         { gap: Spacing.xs },
-  headerTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  // ── Header ──────────────────────────────────────────────────────────────────
+  header:         { gap: Spacing.sm, paddingHorizontal: Spacing.lg },
+  headerTop:      {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
   headerRight:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  backBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  backIcon:       { color: Colors.primaryLight, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, lineHeight: 26 },
-  backLabel:      { color: Colors.primaryLight, fontSize: Typography.size.base, fontWeight: Typography.weight.bold },
-  headerTitle:    { color: Colors.textPrimary, fontSize: Typography.size['3xl'], fontWeight: Typography.weight.black, letterSpacing: Typography.tracking.tight, lineHeight: 36 },
-  headerSubtitle: { color: Colors.textMuted, fontSize: Typography.size.base, lineHeight: 22 },
+  backBtn:        { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  backChevron:    {
+    color: Colors.primaryLight,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.semibold,
+  },
+  backLabel:      {
+    color: Colors.primaryLight,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+  },
+  headerTitle:    {
+    color: Colors.textPrimary,
+    fontSize: Typography.size['3xl'],
+    fontWeight: Typography.weight.black,
+    letterSpacing: Typography.tracking.tight,
+    lineHeight: 36,
+  },
+  headerSubtitle: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.sm,
+    lineHeight: 20,
+    marginTop: 2,
+  },
 
-  // Screen header (compact)
-  screenHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  screenHeaderTitle: { color: Colors.textPrimary, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.black, letterSpacing: Typography.tracking.tight },
+  // ── Screen Header ────────────────────────────────────────────────────────────
+  screenHeaderWrap: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  screenHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  screenHeaderBack: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  screenHeaderTitle: {
+    color: Colors.textPrimary,
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+  },
+  screenHeaderSub: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.xs,
+    marginTop: 2,
+  },
 
-  // Card
+  // ── Card & Surface ──────────────────────────────────────────────────────────
   card: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
-    gap: Spacing.md,
     ...Shadow.sm,
   },
-  cardPressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.995 }],
+  },
+  surface: {
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
 
-  // Surface
-  surface: { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.lg, padding: Spacing.base },
+  // ── Button ───────────────────────────────────────────────────────────────────
+  btn: {
+    height: 52,
+    borderRadius: Radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  btnInline: { alignSelf: 'flex-start' },
+  btnInner:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  btnIconSlot: { marginRight: 2 },
 
-  // Button
-  btn:            { minHeight: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
-  btnPrimary:     { backgroundColor: Colors.primary },
-  btnSecondary:   { backgroundColor: Colors.surfaceElevated, borderWidth: 1, borderColor: Colors.border },
-  btnGhost:       { backgroundColor: Colors.transparent },
-  btnDanger:      { backgroundColor: Colors.errorMuted, borderWidth: 1, borderColor: Colors.error + '40' },
-  btnSm:          { minHeight: 38, borderRadius: Radius.md, paddingHorizontal: Spacing.base },
-  btnMd:          { minHeight: 52 },
-  btnLg:          { minHeight: 58, borderRadius: Radius.xl },
-  btnDisabled:    { opacity: 0.45 },
-  btnPressed:     { opacity: 0.82, transform: [{ scale: 0.975 }] },
+  btnPrimary:   { backgroundColor: Colors.primary, ...Shadow.sm },
+  btnSecondary: {
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+  },
+  btnGhost:   { backgroundColor: Colors.transparent },
+  btnDanger:  {
+    backgroundColor: Colors.errorMuted,
+    borderWidth: 1,
+    borderColor: Colors.error + '45',
+  },
+  btnSuccess: {
+    backgroundColor: Colors.successMuted,
+    borderWidth: 1,
+    borderColor: Colors.success + '45',
+  },
+
+  btnSm: { height: 38, borderRadius: Radius.md, paddingHorizontal: Spacing.base },
+  btnMd: { height: 52 },
+  btnLg: { height: 56, borderRadius: Radius.xl },
+
+  btnDisabled: { opacity: 0.42 },
+  btnPressed:  { opacity: 0.78, transform: [{ scale: 0.975 }] },
+
   btnText:        { fontSize: Typography.size.base, fontWeight: Typography.weight.bold },
   btnTextPrimary: { color: Colors.white },
-  btnTextSecondary:{ color: Colors.primaryLight },
+  btnTextSecondary: { color: Colors.primaryLight },
   btnTextGhost:   { color: Colors.textSecondary },
-  btnTextDanger:  { color: '#FCA5A5' },
+  btnTextDanger:  { color: Colors.errorLight },
+  btnTextSuccess: { color: Colors.successLight },
 
-  // Icon button
-  iconBtn:       { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.md },
-  iconBtnFilled: { backgroundColor: Colors.surfaceElevated, borderWidth: 1, borderColor: Colors.border },
-
-  // Field
-  field:         { gap: Spacing.xs },
-  fieldLabel:    { color: Colors.textSecondary, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
-  fieldHint:     { color: Colors.textMuted, fontSize: Typography.size.xs },
-  fieldError:    { color: Colors.error, fontSize: Typography.size.xs },
-  input: {
-    backgroundColor: Colors.bg,
-    borderColor: Colors.border,
+  // ── Icon Button ──────────────────────────────────────────────────────────────
+  iconBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnFilled: {
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  iconBtnDanger: {
+    backgroundColor: Colors.errorMuted,
+    borderWidth: 1,
+    borderColor: Colors.error + '35',
+  },
+
+  // ── Field ────────────────────────────────────────────────────────────────────
+  field:         { gap: 6 },
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  fieldLabel:    {
+    color: Colors.textSecondary,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    letterSpacing: 0.1,
+  },
+  fieldRequired: {
+    color: Colors.error,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.bold,
+  },
+  fieldHint: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.xs,
+    lineHeight: 16,
+  },
+  fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  fieldErrorDot: { color: Colors.error, fontSize: 6, lineHeight: 16 },
+  fieldError:    { color: Colors.errorLight, fontSize: Typography.size.xs, lineHeight: 16, flex: 1 },
+
+  input: {
+    backgroundColor: Colors.surfaceAlt,
+    borderColor: Colors.border,
+    borderWidth: 1.5,
     borderRadius: Radius.md,
     color: Colors.textPrimary,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
     fontSize: Typography.size.base,
-    minHeight: 52,
+    minHeight: 50,
+    outlineStyle: 'none' as any,
   },
-  inputMultiline: { minHeight: 120, textAlignVertical: 'top', paddingTop: Spacing.md },
-  inputError:    { borderColor: Colors.error },
+  inputFocused:   { borderColor: Colors.primary, borderWidth: 1.5, backgroundColor: Colors.surface },
+  inputMultiline: { minHeight: 110, textAlignVertical: 'top', paddingTop: Spacing.md },
+  inputError:     { borderColor: Colors.error + '80' },
 
-  // Password field
-  passwordRow:   { position: 'relative' },
-  passwordInput: { paddingRight: 52 },
-  eyeBtn:        { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', width: 32 },
-  eyeIcon:       { color: Colors.textMuted, fontSize: 17 },
+  // ── Password ──────────────────────────────────────────────────────────────────
+  passwordWrap: {
+    backgroundColor: Colors.surfaceAlt,
+    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderRadius: Radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 50,
+    paddingLeft: Spacing.base,
+  },
+  passwordInput: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: Typography.size.base,
+    paddingVertical: Spacing.md,
+    outlineStyle: 'none' as any,
+  },
+  eyeBtn: {
+    width: 46,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeIcon: { color: Colors.textMuted, fontSize: 16 },
 
-  // Search
-  searchRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.base, gap: Spacing.sm },
-  searchIcon:   { color: Colors.textMuted, fontSize: 18 },
-  searchInput:  { flex: 1, color: Colors.textPrimary, fontSize: Typography.size.base, paddingVertical: Spacing.md },
-  searchClear:  { color: Colors.textMuted, fontSize: Typography.size.sm },
+  // ── Search ───────────────────────────────────────────────────────────────────
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    height: 48,
+  },
+  searchFocused: { borderColor: Colors.primary },
+  searchIcon:  { color: Colors.textMuted, fontSize: 17 },
+  searchInput: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: Typography.size.sm,
+    paddingVertical: 0,
+    outlineStyle: 'none' as any,
+  },
+  searchClearBtn: { padding: 4 },
+  searchClear:    { color: Colors.textMuted, fontSize: Typography.size.xs },
 
-  // Chip
-  chip:          { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: 8, backgroundColor: Colors.surface },
-  chipActive:    { backgroundColor: Colors.primarySubtle, borderColor: Colors.primaryLight + '60' },
-  chipText:      { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium },
-  chipTextActive:{ color: Colors.primaryLight, fontWeight: Typography.weight.semibold },
+  // ── Chip ─────────────────────────────────────────────────────────────────────
+  chip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    backgroundColor: Colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  chipActive:     { backgroundColor: Colors.primarySubtle, borderColor: Colors.primaryLight + '55' },
+  chipText:       { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium },
+  chipTextActive: { color: Colors.primaryLight, fontWeight: Typography.weight.semibold },
+  chipCount: {
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.full,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  chipCountActive:     { backgroundColor: Colors.primaryMuted },
+  chipCountText:       { color: Colors.textMuted, fontSize: 10, fontWeight: Typography.weight.bold },
+  chipCountTextActive: { color: Colors.primaryLight },
 
-  // Badge
-  badge:     { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.sm, borderWidth: 1, alignSelf: 'flex-start' },
-  badgeText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold },
+  // ── Badge ────────────────────────────────────────────────────────────────────
+  badge:     { borderRadius: Radius.xs, borderWidth: 1, alignSelf: 'flex-start' },
+  badgeXs:   { paddingHorizontal: 5, paddingVertical: 2 },
+  badgeSm:   { paddingHorizontal: 7, paddingVertical: 3 },
+  badgeMd:   { paddingHorizontal: Spacing.sm, paddingVertical: 4 },
+  badgeText: { fontWeight: Typography.weight.semibold },
+  badgeTextXs: { fontSize: 10 },
+  badgeTextSm: { fontSize: Typography.size.xs },
+  badgeTextMd: { fontSize: Typography.size.sm },
 
-  // Avatar
+  // ── Avatar ───────────────────────────────────────────────────────────────────
   avatar:     { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   avatarText: { fontWeight: Typography.weight.bold },
 
-  // Progress
-  progressTrack: { backgroundColor: Colors.border, borderRadius: Radius.full, overflow: 'hidden', width: '100%' },
-  progressFill:  { borderRadius: Radius.full },
+  // ── Progress ──────────────────────────────────────────────────────────────────
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progressLabel:    { color: Colors.textMuted, fontSize: Typography.size.xs },
+  progressValue:    { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
+  progressTrack:    { backgroundColor: Colors.border, borderRadius: Radius.full, overflow: 'hidden', width: '100%' },
+  progressFill:     { borderRadius: Radius.full },
 
-  // Stat card
-  statCard:  { flex: 1, alignItems: 'center', gap: 4 },
+  // ── Stat Card ────────────────────────────────────────────────────────────────
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    gap: 3,
+    borderWidth: 1,
+  },
+  statIcon:  { fontSize: 16, marginBottom: 1 },
   statValue: { fontSize: Typography.size.xl, fontWeight: Typography.weight.black },
   statLabel: { color: Colors.textMuted, fontSize: Typography.size.xs, textAlign: 'center' },
 
-  // Section header
-  sectionRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle:  { color: Colors.textPrimary, fontSize: Typography.size.lg, fontWeight: Typography.weight.black },
-  sectionAction: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+  // ── Section Header ────────────────────────────────────────────────────────────
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    color: Colors.textPrimary,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.black,
+    letterSpacing: Typography.tracking.tight,
+  },
+  sectionAction: {
+    color: Colors.primaryLight,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+  },
 
-  // Divider
-  divider: { height: 1, backgroundColor: Colors.border },
+  // ── Divider ───────────────────────────────────────────────────────────────────
+  divider:      { height: 1, backgroundColor: Colors.border, flex: 1 },
+  dividerRow:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  dividerLabel: { color: Colors.textMuted, fontSize: Typography.size.xs, fontWeight: Typography.weight.medium },
 
-  // Message
-  message:     { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.base },
-  messageText: { fontSize: Typography.size.sm, lineHeight: 20 },
+  // ── Message ───────────────────────────────────────────────────────────────────
+  message: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+  },
+  messageIcon:        { fontSize: 14, lineHeight: 20, flexShrink: 0 },
+  messageText:        { fontSize: Typography.size.sm, lineHeight: 20, flex: 1 },
+  messageDismiss:     { paddingLeft: Spacing.xs },
+  messageDismissText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
 
-  // Empty state
-  emptyState:   { alignItems: 'center', paddingVertical: Spacing['3xl'], gap: Spacing.base },
-  emptyIconWrap:{ width: 56, height: 56, borderRadius: Radius.xl, backgroundColor: Colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
-  emptyIcon:    { color: Colors.primaryLight, fontSize: 24 },
-  emptyTitle:   { color: Colors.textPrimary, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, textAlign: 'center' },
-  emptyText:    { color: Colors.textMuted, fontSize: Typography.size.sm, textAlign: 'center', lineHeight: 20, paddingHorizontal: Spacing.xl },
+  // ── Empty State ───────────────────────────────────────────────────────────────
+  emptyState:   { alignItems: 'center', paddingVertical: Spacing['3xl'], gap: Spacing.lg },
+  emptyIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon:      { color: Colors.primaryLight, fontSize: 22 },
+  emptyTextGroup: { alignItems: 'center', gap: Spacing.sm },
+  emptyTitle:     {
+    color: Colors.textPrimary,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    textAlign: 'center',
+  },
+  emptyText: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.sm,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: Spacing.xl,
+  },
 
-  // Loading
-  loadingState: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingVertical: Spacing['3xl'] },
+  // ── Loading ───────────────────────────────────────────────────────────────────
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing['4xl'],
+  },
   loadingLabel: { color: Colors.textMuted, fontSize: Typography.size.sm },
 
-  // Skeleton
-  skeleton:     { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm },
-  skeletonCard: { backgroundColor: Colors.surface, borderColor: Colors.border, borderWidth: 1, borderRadius: Radius.xl, padding: Spacing.lg, gap: Spacing.md },
+  // ── Skeleton ──────────────────────────────────────────────────────────────────
+  skeleton:     { backgroundColor: Colors.surfaceElevated },
+  skeletonCard: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.lg,
+  },
 
-  // Segmented control
-  segmented:          { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: 4, gap: 4 },
-  segmentItem:        { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.md },
-  segmentActive:      { backgroundColor: Colors.surfaceElevated },
-  segmentText:        { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
-  segmentTextActive:  { color: Colors.textPrimary },
+  // ── Segmented Control ─────────────────────────────────────────────────────────
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 3,
+    gap: 3,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: 'center',
+    borderRadius: Radius.md,
+  },
+  segmentActive:     { backgroundColor: Colors.surfaceElevated, ...Shadow.xs },
+  segmentText:       { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
+  segmentTextActive: { color: Colors.textPrimary, fontWeight: Typography.weight.bold },
 
-  // Bottom nav
+  // ── List Row ──────────────────────────────────────────────────────────────────
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  listRowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  listRowIconText: { fontSize: 15 },
+  listRowLabel: {
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+  },
+  listRowSubtitle: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.xs,
+    marginTop: 2,
+  },
+  listRowValue:   { color: Colors.textMuted, fontSize: Typography.size.sm },
+  listRowChevron: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.medium,
+  },
+
+  // ── Bottom Nav ────────────────────────────────────────────────────────────────
   nav: {
     position: 'absolute',
-    left: Spacing.base,
-    right: Spacing.base,
-    bottom: Spacing.base,
-    height: 70,
+    left: Spacing.md,
+    right: Spacing.md,
+    height: 72,
     borderRadius: Radius['2xl'],
     borderWidth: 1,
     borderColor: Colors.border,
@@ -888,15 +1617,127 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
     ...Shadow.lg,
   },
-  navItem:        { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 52, gap: 3, position: 'relative' },
-  navIndicator:   { position: 'absolute', top: 6, width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.primaryLight },
-  navIcon:        { fontSize: 20, color: Colors.textMuted },
-  navIconActive:  { color: Colors.primaryLight },
-  navLabel:       { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: Colors.textMuted },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    minHeight: 54,
+    gap: 4,
+    position: 'relative',
+  },
+  navActiveBar: {
+    position: 'absolute',
+    top: 0,
+    width: 20,
+    height: 2.5,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryLight,
+  },
+  navIconWrap: {
+    width: 34,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.sm,
+  },
+  navIconWrapActive: {
+    backgroundColor: Colors.primarySubtle,
+    borderRadius: Radius.md,
+  },
+  navIcon:       { fontSize: 18, color: Colors.textMuted },
+  navIconActive: { color: Colors.primaryLight },
+  navLabel:      { fontSize: 10, fontWeight: Typography.weight.bold, color: Colors.textMuted },
   navLabelActive: { color: Colors.primaryLight },
+
+  // ── Confirm Dialog ─────────────────────────────────────────────────────────────
+  confirmWrap: {
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    ...Shadow.md,
+  },
+  confirmTitle:   { color: Colors.textPrimary, fontSize: Typography.size.base, fontWeight: Typography.weight.bold },
+  confirmMessage: { color: Colors.textMuted, fontSize: Typography.size.sm, lineHeight: 20 },
+  confirmActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm },
+
+  // ── Tag ───────────────────────────────────────────────────────────────────────
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  tagText:       { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold },
+  tagRemove:     { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  tagRemoveText: { fontSize: 9, fontWeight: Typography.weight.bold },
+
+  // ── FAB ───────────────────────────────────────────────────────────────────────
+  fab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+    ...Shadow.md,
+  },
+  fabIcon:  { color: Colors.white, fontSize: 20, fontWeight: Typography.weight.black, lineHeight: 22 },
+  fabLabel: { color: Colors.white, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+
+  // ── Step Indicator ────────────────────────────────────────────────────────────
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  stepItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    position: 'relative',
+  },
+  stepCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: Colors.primarySubtle,
+    borderColor: Colors.primaryLight,
+  },
+  stepCircleDone: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  stepNum:        { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+  stepNumActive:  { color: Colors.primaryLight },
+  stepCheckmark:  { color: Colors.white, fontSize: Typography.size.xs, fontWeight: Typography.weight.black },
+  stepLabel:      { color: Colors.textMuted, fontSize: 10, fontWeight: Typography.weight.medium, textAlign: 'center' },
+  stepLabelActive: { color: Colors.primaryLight, fontWeight: Typography.weight.bold },
+  stepLabelDone:  { color: Colors.textSecondary },
+  stepConnector: {
+    position: 'absolute',
+    top: 15,
+    left: '50%',
+    right: '-50%',
+    height: 1.5,
+    backgroundColor: Colors.border,
+  },
+  stepConnectorDone: { backgroundColor: Colors.primary },
 });
 
 export const uiStyles = styles;

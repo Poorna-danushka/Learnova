@@ -4,18 +4,18 @@ import apiClient from './apiClient';
 export type StudyMaterial = {
   id: number;
   owner_id: number;
-  subject_id: number;
+  module_id: number;
   original_filename: string;
   content_type: string;
   file_size: number;
   created_at: string;
 };
 
-export const getStudyMaterials = async (subjectId?: number): Promise<StudyMaterial[]> =>
-  (await apiClient.get<StudyMaterial[]>('/study-materials', { params: { subject_id: subjectId } })).data;
+export const getStudyMaterials = async (moduleId?: number): Promise<StudyMaterial[]> =>
+  (await apiClient.get<StudyMaterial[]>('/study-materials', { params: { module_id: moduleId } })).data;
 
 export const uploadStudyMaterial = async (
-  subjectId: number,
+  moduleId: number,
   uri: string,
   name: string,
   type: string
@@ -30,7 +30,7 @@ export const uploadStudyMaterial = async (
     formData.append('file', { uri, name, type } as unknown as Blob);
   }
 
-  return (await apiClient.post<StudyMaterial>(`/study-materials?subject_id=${subjectId}`, formData, {
+  return (await apiClient.post<StudyMaterial>(`/study-materials?module_id=${moduleId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })).data;
 };

@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import * as Speech from 'expo-speech';
-import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
+import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import { Button, Message, SkeletonLine } from '@/components/ui';
 import { AIRateLimitBanner } from '@/components/AIRateLimitBanner';
 import { AI_ERROR_MESSAGES, type AIErrorKind } from '@/services/api/aiApi';
