@@ -1,9 +1,9 @@
-import apiClient from './apiClient';
+﻿import apiClient from './apiClient';
 
 export type StudySession = {
   id: number;
   owner_id: number;
-  subject_id?: number;
+  module_id?: number;
   title: string;
   scheduled_for: string;
   duration_minutes: number;
@@ -14,7 +14,7 @@ export type StudySession = {
 export type StudyGoal = {
   id: number;
   owner_id: number;
-  subject_id?: number;
+  module_id?: number;
   title: string;
   target_date?: string;
   is_completed: boolean;

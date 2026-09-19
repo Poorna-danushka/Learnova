@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View } from 'react-native';
-
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 type StudyDay = {
