@@ -1,6 +1,6 @@
 // ─── Axios API Client ─────────────────────────────────────────────────────────
 //
-// This file creates ONE reusable Axios instance for the entire Nexora app.
+// This file creates ONE reusable Axios instance for the entire Learnova app.
 // Every screen that needs to talk to the FastAPI backend uses THIS instance —
 // not a new Axios import configured from scratch.
 //
