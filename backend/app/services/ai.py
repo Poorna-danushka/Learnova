@@ -127,39 +127,52 @@ def _request_completion(messages: list[dict[str, str]]) -> str:
         if message["role"] != "system"
     ]
 
-    try:
-        response = httpx.post(
-            GEMINI_GENERATE_CONTENT_URL.format(model=GEMINI_MODEL),
-            headers={
-                "x-goog-api-key": GEMINI_API_KEY,
-                "Content-Type": "application/json",
-            },
-            json={
-                "systemInstruction": {"parts": [{"text": system_instruction}]},
-                "contents": contents,
-                "generationConfig": {"temperature": 0.2},
-            },
-            timeout=GEMINI_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        data = response.json()
-    except httpx.TimeoutException as exc:
-        logger.error("AI provider timeout: %s", exc.__class__.__name__)
-        raise AIProviderError("The AI provider timed out.") from exc
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "AI provider HTTP error: status=%s category=%s response=%s",
-            exc.response.status_code,
-            _provider_error_category(exc.response.status_code),
-            _sanitized_provider_response(exc.response.text),
-        )
-        raise AIProviderError("The AI provider returned an error.") from exc
-    except httpx.RequestError as exc:
-        logger.error("AI provider connection error: %s", exc.__class__.__name__)
-        raise AIProviderError("The AI provider could not be reached.") from exc
-    except ValueError as exc:
-        logger.error("AI provider returned malformed JSON: %s", exc.__class__.__name__)
-        raise AIProviderError("The AI provider returned invalid data.") from exc
+    candidate_models = []
+    if GEMINI_MODEL:
+        candidate_models.append(GEMINI_MODEL)
+    for fallback in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-latest", "gemini-3.7-flash"]:
+        if fallback not in candidate_models:
+            candidate_models.append(fallback)
+
+    data = None
+    last_exception = None
+
+    for model_name in candidate_models:
+        try:
+            response = httpx.post(
+                GEMINI_GENERATE_CONTENT_URL.format(model=model_name),
+                headers={
+                    "x-goog-api-key": GEMINI_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "systemInstruction": {"parts": [{"text": system_instruction}]},
+                    "contents": contents,
+                    "generationConfig": {"temperature": 0.2},
+                },
+                timeout=GEMINI_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            data = response.json()
+            break
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "Model %s failed with HTTP %s. Trying fallback model...",
+                model_name,
+                exc.response.status_code,
+            )
+            last_exception = exc
+            if exc.response.status_code in (429, 503, 404, 502):
+                continue
+            raise AIProviderError("The AI provider returned an error.") from exc
+        except (httpx.TimeoutException, httpx.RequestError) as exc:
+            logger.warning("Model %s network error: %s. Trying fallback model...", model_name, exc.__class__.__name__)
+            last_exception = exc
+            continue
+
+    if data is None:
+        logger.error("All Gemini candidate models failed. Last exception: %s", last_exception)
+        raise AIProviderError("The AI provider is currently busy. Please try again.") from last_exception
 
     if not isinstance(data, dict):
         raise AIProviderError("The AI provider returned invalid data.")
@@ -195,19 +208,40 @@ def _request_completion(messages: list[dict[str, str]]) -> str:
     return answer.strip()
 
 
-def answer_conversation(messages: list[dict[str, str]]) -> str:
+def answer_conversation(
+    messages: list[dict[str, str]],
+    user_modules: list[str] | None = None,
+) -> str:
     if not messages:
         raise AIInputError("Conversation must contain a message.")
     _validate_input_size(*(message["content"] for message in messages))
+
+    if user_modules and len(user_modules) > 0:
+        modules_ctx = f"The student's enrolled Learnora Modules: {', '.join(user_modules)}."
+    else:
+        modules_ctx = "The student currently has no modules created yet."
+
+    system_prompt = (
+        "You are Learnova AI, a friendly, knowledgeable academic tutor inside the Learnova app helping university students understand technical and academic concepts.\n"
+        f"{modules_ctx}\n\n"
+        "LEARNOVA TUTOR RESPONSE RULES:\n"
+        "1. NATURAL & CONVERSATIONAL: Start directly without robotic AI filler phrases (never use 'Certainly!', 'Great question!', 'As an AI...', 'Here is a comprehensive explanation...', 'In conclusion...', or 'I hope this helps!'). Speak like an encouraging, articulate university tutor.\n"
+        "2. DYNAMIC STRUCTURE (DO NOT USE HARDCODED TEMPLATES): Do NOT force every response into fixed sections like 'Overview', 'Key Takeaways', or 'Real-World Example'. Adapt your structure dynamically to the question:\n"
+        "   - Concept questions: Intuitive overview -> How it works -> Concrete example -> Key points -> Optional Quick Check.\n"
+        "   - Coding questions: Clear explanation -> Clean code block -> Explanation of key lines -> Output/usage example.\n"
+        "   - Comparison questions: Main difference -> Structured comparison -> Key trade-offs.\n"
+        "   - Simple/Short questions: 2-4 concise, high-yield sentences or bullet points. Do NOT generate huge essays for simple questions.\n"
+        "   - Follow-up questions: Answer directly using the existing conversation context without repeating previous introductory explanations.\n"
+        "3. EMOJI SPARINGLY: Do NOT add emojis to every heading or line. Keep the look clean, academic, and professional.\n"
+        "4. FORMATTING: Use clean Markdown headings (e.g. ## How it works), bullet lists (- item), code blocks with language identifiers (e.g. ```java ... ```), and markdown tables where helpful for comparisons.\n"
+        "5. QUICK CHECK: For concept explanations, you may optionally end with a brief 1-question 'Quick check' to help the student test their understanding."
+    )
+
     return _request_completion(
         [
             {
                 "role": "system",
-                "content": (
-                    "You are Nexora's study assistant. Answer clearly and helpfully. "
-                    "When a question is academic, explain the reasoning and use examples "
-                    "when useful. Do not claim to have access to information not provided."
-                ),
+                "content": system_prompt,
             },
             *messages,
         ]

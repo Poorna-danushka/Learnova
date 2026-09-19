@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -242,8 +242,15 @@ def create_quiz(data: QuizCreate, current_user: User = Depends(get_current_user)
     return quiz
 
 @router.get("", response_model=list[QuizResponse])
-def list_quizzes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Quiz).filter(Quiz.owner_id == current_user.id).order_by(Quiz.created_at.desc()).all()
+def list_quizzes(
+    module_id: int | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Quiz).filter(Quiz.owner_id == current_user.id)
+    if module_id is not None:
+        query = query.filter(Quiz.module_id == module_id)
+    return query.order_by(Quiz.created_at.desc()).all()
 
 @router.get("/{quiz_id}", response_model=QuizResponse)
 def get_quiz(quiz_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -63,7 +63,7 @@ def send_verification_email(user: User, token: str) -> None:
     name = escape(user.full_name)
     send_email(
         to=user.email,
-        subject="Verify your Nexora email",
+        subject="Verify your Learnora email",
         html=(
             f"<p>Hi {name},</p>"
             f'<p><a href="{EMAIL_VERIFICATION_URL}?token={token}">'
@@ -77,7 +77,7 @@ def send_password_reset_email(user: User, token: str) -> None:
     name = escape(user.full_name)
     send_email(
         to=user.email,
-        subject="Reset your Nexora password",
+        subject="Reset your Learnora password",
         html=(
             f"<p>Hi {name},</p>"
             f'<p><a href="{PASSWORD_RESET_URL}?token={token}">'

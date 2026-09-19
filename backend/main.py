@@ -45,14 +45,14 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Nexora API",
+    title="Learnova API",
     description="AI-powered student learning and productivity platform for university students.",
     version="0.1.0",
     lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
-# CORS — allow the Expo / React Native web dev server (and any future origin)
+# CORS ï¿½ allow the Expo / React Native web dev server (and any future origin)
 # to call this API. In production, replace "*" with your actual domain(s).
 # ---------------------------------------------------------------------------
 app.add_middleware(
@@ -78,7 +78,7 @@ async def add_security_headers(request, call_next):
 # ---------------------------------------------------------------------------
 @app.get("/")
 def root():
-    return {"message": "Welcome to Nexora API"}
+    return {"message": "Welcome to Learnova API"}
 
 
 @app.get("/health")
@@ -121,4 +121,4 @@ app.include_router(notifications.router)
 app.include_router(reminders.router)
 app.include_router(notification_history.router)
 
-logger.info("Nexora API started successfully")
+logger.info("Learnova API started successfully")

@@ -47,6 +47,15 @@ def list_modules(
     )
 
 
+@router.get("/{module_id}", response_model=ModuleResponse)
+def get_module(
+    module_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return get_owned_module(module_id, current_user, db)
+
+
 @router.patch("/{module_id}", response_model=ModuleResponse)
 def update_module(
     module_id: int,

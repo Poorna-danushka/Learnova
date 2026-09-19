@@ -1,7 +1,7 @@
 """
 tests/conftest.py
 ------------------
-Pytest configuration and test fixtures for Nexora backend.
+Pytest configuration and test fixtures for Learnova backend.
 """
 
 import os

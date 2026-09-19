@@ -8,7 +8,7 @@ from app.database.database import Base
 
 
 class User(Base):
-    """Represents a registered Nexora user.
+    """Represents a registered Learnova user.
 
     Contains core authentication & profile information as defined in Section 4.
     """
