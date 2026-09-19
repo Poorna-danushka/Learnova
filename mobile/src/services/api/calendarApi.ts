@@ -1,9 +1,9 @@
-import apiClient from './apiClient';
+﻿import apiClient from './apiClient';
 
 export type CalendarEvent = {
   id: number;
   owner_id: number;
-  subject_id?: number;
+  module_id?: number;
   title: string;
   description?: string;
   starts_at: string;
