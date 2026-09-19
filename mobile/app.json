@@ -1,20 +1,22 @@
 {
   "expo": {
-    "name": "Nexora",
-    "slug": "nexora",
+    "name": "Learnova",
+    "slug": "learnova",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nexora",
+    "scheme": "learnova",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.learnova.app"
     },
     "android": {
+      "package": "com.learnova.app",
       "edgeToEdgeEnabled": true,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#E8F8F7",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -32,7 +34,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#208AEF",
+          "color": "#0EA5A0",
           "defaultChannel": "default",
           "androidMode": "default"
         }
@@ -40,7 +42,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0EA5A0",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
