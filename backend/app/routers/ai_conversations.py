@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.database.database import get_db
 from app.models.ai_conversation import AIConversation, AIMessage
+from app.models.module import Module
 from app.models.user import User
 from app.schemas.ai_conversation import (
     AIConversationCreate,
@@ -115,12 +116,14 @@ def send_message(
     ).order_by(AIMessage.created_at, AIMessage.id).all()
     prompt_messages = [{"role": message.role, "content": message.content} for message in existing]
     prompt_messages.append({"role": "user", "content": data.content})
+    user_modules = db.query(Module).filter(Module.owner_id == user.id).all()
+    module_names = [m.name for m in user_modules]
     try:
         answer = execute_with_ai_usage(
             db,
             user.id,
             "ai_chat",
-            lambda: answer_conversation(prompt_messages),
+            lambda: answer_conversation(prompt_messages, user_modules=module_names),
         )
     except AIUsageLimitError as exc:
         raise HTTPException(status_code=429, detail="Rolling 24-hour AI request limit reached.") from exc
