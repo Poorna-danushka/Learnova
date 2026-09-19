@@ -21,7 +21,7 @@ router = APIRouter(
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new Nexora user with full student details."""
+    """Register a new Learnova user with full student details."""
     normalized_email = user_data.email.lower()
     existing_user = db.query(User).filter(User.email == normalized_email).first()
 
