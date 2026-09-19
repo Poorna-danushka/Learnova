@@ -1,4 +1,4 @@
-﻿import re
+import re
 import os
 import tempfile
 import uuid
@@ -162,8 +162,8 @@ def list_materials(
     db: Session = Depends(get_db),
 ):
     query = db.query(StudyMaterial).filter(StudyMaterial.owner_id == current_user.id)
-    if subject_id is not None:
-        query = query.filter(StudyMaterial.module_id == subject_id)
+    if module_id is not None:
+        query = query.filter(StudyMaterial.module_id == module_id)
     return query.order_by(StudyMaterial.created_at.desc()).all()
 
 
