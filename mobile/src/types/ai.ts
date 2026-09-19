@@ -1,15 +1,15 @@
-// ─── Nexora Mobile — AI Type Definitions ────────────────────────────────────
+// ─── Learnova Mobile — AI Type Definitions ──────────────────────────────────
 // Mirrors backend/app/schemas/ai.py exactly.
 // Import from '@/types/ai' in services and components.
 
-// ─── Note Summarization ───────────────────────────────────────────────────────
+// â”€â”€â”€ Note Summarization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /** Response from POST /notes/{note_id}/summarize */
 export interface NoteSummaryResponse {
   note_id: number;
   summary: string;
 }
 
-// ─── Study-Material Q&A ───────────────────────────────────────────────────────
+// â”€â”€â”€ Study-Material Q&A â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /** Request body for POST /study-materials/{material_id}/ask */
 export interface MaterialQuestionRequest {
   question: string;
@@ -21,15 +21,15 @@ export interface MaterialQuestionResponse {
   answer: string;
 }
 
-// ─── AI Study-Plan Generation ─────────────────────────────────────────────────
+// â”€â”€â”€ AI Study-Plan Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /** Request body for POST /study-plans/generate
- *  - subject_ids: [] means all subjects
- *  - days: 1–30 (default 7)
- *  - minutes_per_day: 15–480 (default 60)
+ *  - module_ids: [] means all subjects
+ *  - days: 1â€“30 (default 7)
+ *  - minutes_per_day: 15â€“480 (default 60)
  *  - priorities: optional free-text up to 2000 chars
  */
 export interface StudyPlanRequest {
-  subject_ids?: number[];
+  module_ids?: number[];
   days?: number;
   minutes_per_day?: number;
   priorities?: string;
@@ -40,7 +40,7 @@ export interface StudyPlanResponse {
   id?: number;
   plan: string;
   title?: string;
-  subject_ids?: number[];
+  module_ids?: number[];
   days?: number;
   minutes_per_day?: number;
   priorities?: string;
@@ -62,14 +62,14 @@ export interface AIMessage {
   created_at: string;
 }
 
-// ─── AI Quiz Generation ───────────────────────────────────────────────────────
+// â”€â”€â”€ AI Quiz Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /** Request body for POST /quizzes/generate
- *  Exactly one of subject_id or material_id must be provided.
- *  - question_count: 1–20 (default 5)
+ *  Exactly one of module_id or material_id must be provided.
+ *  - question_count: 1â€“20 (default 5)
  *  - topic: optional hint up to 500 chars
  */
 export interface QuizGenerationRequest {
-  subject_id?: number;
+  module_id?: number;
   material_id?: number;
   question_count?: number;
   topic?: string;
@@ -91,22 +91,22 @@ export interface QuizExplanationResponse {
   explanation: string;
 }
 
-/** Response from POST /quizzes/generate (ephemeral — not saved to DB) */
+/** Response from POST /quizzes/generate (ephemeral â€” not saved to DB) */
 export interface GeneratedQuizResponse {
   title: string;
   questions: GeneratedQuizQuestion[];
 }
 
-// ─── Shared AI Error Type ─────────────────────────────────────────────────────
+// â”€â”€â”€ Shared AI Error Type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /**
  * Normalised error kind returned by parseAIError().
  *
- * rate_limit  — HTTP 429, rolling 24-hour quota exhausted
- * validation  — HTTP 422, invalid request payload
- * not_found   — HTTP 404, resource doesn't exist / file missing
- * server      — HTTP 502/503, upstream AI error or not configured
- * network     — timeout or no response
- * unknown     — anything else
+ * rate_limit  â€” HTTP 429, rolling 24-hour quota exhausted
+ * validation  â€” HTTP 422, invalid request payload
+ * not_found   â€” HTTP 404, resource doesn't exist / file missing
+ * server      â€” HTTP 502/503, upstream AI error or not configured
+ * network     â€” timeout or no response
+ * unknown     â€” anything else
  */
 export type AIErrorKind =
   | 'rate_limit'
