@@ -4,10 +4,10 @@ import * as SecureStore from 'expo-secure-store';
 
 import { registerDeviceToken } from '@/services/api/notificationApi';
 
-const DEVICE_ID_KEY = 'nexora.notification_device_id';
+const DEVICE_ID_KEY = 'learnova.notification_device_id';
 
 function createDeviceId(): string {
-  return `nexora-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
+  return `learnova-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
 }
 
 async function getDeviceId(): Promise<string> {

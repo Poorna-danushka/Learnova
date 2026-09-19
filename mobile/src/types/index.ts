@@ -1,4 +1,4 @@
-// Shared TypeScript definitions for Nexora Mobile App
+// Shared TypeScript definitions for Learnova Mobile App
 
 export interface UserProfile {
   id: number;

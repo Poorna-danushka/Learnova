@@ -1,12 +1,7 @@
 // ─── AISummaryCard ────────────────────────────────────────────────────────────
-// Reusable card that renders the three states of a note-summarization request:
-//   loading → skeleton rows
-//   error   → AIRateLimitBanner or generic error message
-//   success → formatted summary text with AI badge
-
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
 import { Button, Message, SkeletonLine } from '@/components/ui';
 import { AIRateLimitBanner } from '@/components/AIRateLimitBanner';
 import { AI_ERROR_MESSAGES, type AIErrorKind } from '@/services/api/aiApi';
@@ -19,133 +14,103 @@ interface AISummaryCardProps {
   onRetry?: () => void;
 }
 
-export function AISummaryCard({
-  summary,
-  loading,
-  error,
-  onDismiss,
-  onRetry,
-}: AISummaryCardProps) {
+export function AISummaryCard({ summary, loading, error, onDismiss, onRetry }: AISummaryCardProps) {
   if (!loading && !error && !summary) return null;
 
   return (
-    <View style={styles.card}>
-      {/* Header row */}
-      <View style={styles.header}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeIcon}>✦</Text>
-          <Text style={styles.badgeText}>AI Summary</Text>
+    <View style={s.card}>
+      {/* Header */}
+      <View style={s.header}>
+        <View style={s.badge}>
+          <Text style={s.badgeIcon}>✦</Text>
+          <Text style={s.badgeText}>AI Summary</Text>
         </View>
         {onDismiss && !loading && (
-          <Pressable
-            onPress={onDismiss}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss summary"
-          >
-            <Text style={styles.dismiss}>✕</Text>
+          <Pressable onPress={onDismiss} hitSlop={10} accessibilityRole="button" accessibilityLabel="Dismiss summary" style={s.dismissBtn}>
+            <Text style={s.dismissText}>✕</Text>
           </Pressable>
         )}
       </View>
 
-      {/* Loading state */}
+      {/* Loading */}
       {loading && (
-        <View style={styles.skeletonWrap}>
-          <SkeletonLine width="95%" height={14} />
-          <SkeletonLine width="88%" height={14} />
-          <SkeletonLine width="92%" height={14} />
-          <SkeletonLine width="70%" height={14} />
+        <View style={s.skeletons}>
+          <SkeletonLine width="96%" height={13} />
+          <SkeletonLine width="88%" height={13} />
+          <SkeletonLine width="92%" height={13} />
+          <SkeletonLine width="74%" height={13} />
+          <SkeletonLine width="84%" height={13} />
         </View>
       )}
 
-      {/* Error state */}
+      {/* Error */}
       {!loading && error && (
-        <View style={styles.errorWrap}>
-          {error === 'rate_limit' ? (
-            <AIRateLimitBanner />
-          ) : (
-            <Message tone="error">{AI_ERROR_MESSAGES[error]}</Message>
-          )}
-          {onRetry && error !== 'rate_limit' && (
-            <Button
-              label="Retry"
-              onPress={onRetry}
-              variant="ghost"
-              size="sm"
-            />
-          )}
+        <View style={s.errorWrap}>
+          {error === 'rate_limit' ? <AIRateLimitBanner /> : <Message tone="error">{AI_ERROR_MESSAGES[error]}</Message>}
+          {onRetry && error !== 'rate_limit' && <Button label="Try again" onPress={onRetry} variant="ghost" size="sm" />}
         </View>
       )}
 
-      {/* Success state */}
+      {/* Success */}
       {!loading && !error && summary && (
-        <Text style={styles.summaryText}>{summary}</Text>
-      )}
-
-      {/* Footer disclaimer */}
-      {!loading && !error && summary && (
-        <Text style={styles.disclaimer}>
-          AI-generated · Not saved to your notes
-        </Text>
+        <>
+          <View style={s.dividerRow}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerLabel}>SUMMARY</Text>
+            <View style={s.dividerLine} />
+          </View>
+          <Text style={s.summaryText}>{summary}</Text>
+          <View style={s.footer}>
+            <View style={s.footerBadge}>
+              <Text style={s.footerBadgeText}>✦ AI-generated</Text>
+            </View>
+            <Text style={s.footerNote}>Not saved to your notes</Text>
+          </View>
+        </>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: {
     backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.primary + '40',
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.primary + '35',
+    padding: Spacing.lg, gap: Spacing.md, ...Shadow.sm,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  header:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.primarySubtle,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: Colors.primary + '50',
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    backgroundColor: Colors.primarySubtle, borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 5,
+    borderWidth: 1, borderColor: Colors.primaryMuted,
   },
-  badgeIcon: {
-    color: Colors.primaryLight,
-    fontSize: 11,
-  },
+  badgeIcon: { color: Colors.primaryLight, fontSize: 11 },
   badgeText: {
-    color: Colors.primaryLight,
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.bold,
-    letterSpacing: Typography.tracking.wider,
-    textTransform: 'uppercase',
+    color: Colors.primaryLight, fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.bold, letterSpacing: 1.2, textTransform: 'uppercase',
   },
-  dismiss: {
-    color: Colors.textMuted,
-    fontSize: Typography.size.sm,
+  dismissBtn: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
-  skeletonWrap: {
-    gap: Spacing.sm,
+  dismissText: { color: Colors.textMuted, fontSize: 10, fontWeight: Typography.weight.bold },
+  skeletons:  { gap: Spacing.sm },
+  errorWrap:  { gap: Spacing.sm },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  dividerLine:{ flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerLabel:{ color: Colors.textMuted, fontSize: 10, fontWeight: Typography.weight.bold, letterSpacing: 2 },
+  summaryText:{ color: Colors.textSecondary, fontSize: Typography.size.base, lineHeight: 26 },
+  footer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  errorWrap: {
-    gap: Spacing.sm,
+  footerBadge: {
+    backgroundColor: Colors.primarySubtle, borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: Colors.primaryMuted,
   },
-  summaryText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.size.base,
-    lineHeight: 24,
-  },
-  disclaimer: {
-    color: Colors.textMuted,
-    fontSize: Typography.size.xs,
-    fontStyle: 'italic',
-  },
+  footerBadgeText: { color: Colors.primaryLight, fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold },
+  footerNote:      { color: Colors.textMuted, fontSize: Typography.size.xs, fontStyle: 'italic' },
 });

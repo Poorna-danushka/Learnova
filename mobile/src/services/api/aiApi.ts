@@ -1,4 +1,4 @@
-// ─── Nexora Mobile — Centralized AI API Service ──────────────────────────────
+// ─── Learnova Mobile — Centralized AI API Service ──────────────────────────
 //
 // All AI network calls live here. Screens import from this module — never
 // call the AI endpoints directly from a screen or component.
@@ -67,7 +67,7 @@ export const AI_ERROR_MESSAGES: Record<AIErrorKind, string> = {
   validation:  'Your request contained invalid data. Please check your input.',
   not_found:   'The content could not be found. It may have been deleted.',
   server:      'AI is taking a little longer than expected. Please try again.',
-  network:     "We couldn't connect to Nexora right now. Check your connection and try again.",
+  network:     "We couldn't connect to Learnova right now. Check your connection and try again.",
   unknown:     'We couldn’t create your plan right now. Please try again.',
 };
 

@@ -1,9 +1,9 @@
-import apiClient from './apiClient';
+﻿import apiClient from './apiClient';
 
 export type Note = {
   id: number;
   owner_id: number;
-  subject_id: number;
+  module_id: number;
   title: string;
   content: string;
   created_at: string;
@@ -11,13 +11,16 @@ export type Note = {
 };
 
 export type NoteInput = {
-  subject_id: number;
+  module_id: number;
   title: string;
   content: string;
 };
 
-export const getNotes = async (subjectId?: number): Promise<Note[]> =>
-  (await apiClient.get<Note[]>('/notes', { params: { subject_id: subjectId } })).data;
+export const getNotes = async (moduleId?: number): Promise<Note[]> =>
+  (await apiClient.get<Note[]>('/notes', { params: { module_id: moduleId } })).data;
+
+export const getNoteById = async (id: number): Promise<Note> =>
+  (await apiClient.get<Note>(`/notes/${id}`)).data;
 
 export const createNote = async (data: NoteInput): Promise<Note> =>
   (await apiClient.post<Note>('/notes', data)).data;
