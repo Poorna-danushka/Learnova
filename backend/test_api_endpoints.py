@@ -6,7 +6,18 @@ import requests
 import json
 from datetime import datetime, timedelta
 
+import pytest
+
 BASE_URL = "http://127.0.0.1:8000"
+
+def server_is_running():
+    try:
+        return requests.get(f"{BASE_URL}/health", timeout=1).status_code == 200
+    except Exception:
+        return False
+
+pytestmark = pytest.mark.skipif(not server_is_running(), reason="Live FastAPI server on http://127.0.0.1:8000 is not running")
+
 TEST_EMAIL = f"test_user_{datetime.now().timestamp()}@test.com"
 TEST_PASSWORD = "TestPassword123!"
 TEST_NAME = "Test User"
@@ -44,10 +55,10 @@ def test_health_check():
         response = requests.get(f"{BASE_URL}/health")
         passed = response.status_code == 200 and response.json().get("status") == "online"
         print_test("Health check", passed, f"Status: {response.json()}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Health check", False, str(e))
-        return False
+        assert False
 
 def test_user_registration():
     print_section("USER REGISTRATION")
@@ -69,10 +80,10 @@ def test_user_registration():
             print_test("User registration", True, f"User ID: {user_id}, Email: {user_data.get('email')}")
         else:
             print_test("User registration", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("User registration", False, str(e))
-        return False
+        assert False
 
 def test_user_login():
     print_section("USER LOGIN")
@@ -91,10 +102,10 @@ def test_user_login():
             print_test("User login", True, f"Access token received (length: {len(access_token)})")
         else:
             print_test("User login", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("User login", False, str(e))
-        return False
+        assert False
 
 def test_get_current_user():
     print_section("GET CURRENT USER")
@@ -107,10 +118,10 @@ def test_get_current_user():
             print_test("Get current user", True, f"Name: {user_data.get('full_name')}, Email: {user_data.get('email')}")
         else:
             print_test("Get current user", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get current user", False, str(e))
-        return False
+        assert False
 
 def test_token_refresh():
     print_section("TOKEN REFRESH")
@@ -125,10 +136,10 @@ def test_token_refresh():
             print_test("Token refresh", True, "New access token received")
         else:
             print_test("Token refresh", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Token refresh", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 2. MODULES TESTS
@@ -153,10 +164,10 @@ def test_create_module():
             print_test("Create module", True, f"Module ID: {module_id}, Name: {module_data.get('name')}")
         else:
             print_test("Create module", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create module", False, str(e))
-        return False
+        assert False
 
 def test_get_modules():
     print_section("GET MODULES")
@@ -169,10 +180,10 @@ def test_get_modules():
             print_test("Get modules", True, f"Found {len(modules)} modules")
         else:
             print_test("Get modules", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get modules", False, str(e))
-        return False
+        assert False
 
 def test_update_module():
     print_section("UPDATE MODULE")
@@ -186,10 +197,10 @@ def test_update_module():
             print_test("Update module", True, f"Progress updated to: {module_data.get('progress')}%")
         else:
             print_test("Update module", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Update module", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 3. NOTES TESTS
@@ -213,10 +224,10 @@ def test_create_note():
             print_test("Create note", True, f"Note ID: {note_id}, Title: {note_data.get('title')}")
         else:
             print_test("Create note", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create note", False, str(e))
-        return False
+        assert False
 
 def test_get_notes():
     print_section("GET NOTES")
@@ -229,10 +240,10 @@ def test_get_notes():
             print_test("Get notes", True, f"Found {len(notes)} notes")
         else:
             print_test("Get notes", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get notes", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 4. STUDY SESSIONS TESTS
@@ -257,10 +268,10 @@ def test_create_study_session():
             print_test("Create study session", True, f"Session ID: {session_data.get('id')}, Duration: {session_data.get('duration_minutes')} min")
         else:
             print_test("Create study session", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create study session", False, str(e))
-        return False
+        assert False
 
 def test_get_study_sessions():
     print_section("GET STUDY SESSIONS")
@@ -273,10 +284,10 @@ def test_get_study_sessions():
             print_test("Get study sessions", True, f"Found {len(sessions)} sessions")
         else:
             print_test("Get study sessions", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get study sessions", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 5. CALENDAR EVENTS TESTS
@@ -304,10 +315,10 @@ def test_create_calendar_event():
             print_test("Create calendar event", True, f"Event ID: {calendar_event_id}, Title: {event_data.get('title')}")
         else:
             print_test("Create calendar event", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create calendar event", False, str(e))
-        return False
+        assert False
 
 def test_get_calendar_events():
     print_section("GET CALENDAR EVENTS")
@@ -320,10 +331,10 @@ def test_get_calendar_events():
             print_test("Get calendar events", True, f"Found {len(events)} events")
         else:
             print_test("Get calendar events", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get calendar events", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 6. REMINDERS TESTS
@@ -350,10 +361,10 @@ def test_create_reminder():
             print_test("Create reminder", True, f"Reminder ID: {reminder_id}, Title: {reminder_data.get('title')}")
         else:
             print_test("Create reminder", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create reminder", False, str(e))
-        return False
+        assert False
 
 def test_get_reminders():
     print_section("GET REMINDERS")
@@ -366,10 +377,10 @@ def test_get_reminders():
             print_test("Get reminders", True, f"Found {len(reminders)} reminders")
         else:
             print_test("Get reminders", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get reminders", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 7. QUIZ TESTS
@@ -392,10 +403,10 @@ def test_create_quiz():
             print_test("Create quiz", True, f"Quiz ID: {quiz_id}, Title: {quiz_data.get('title')}")
         else:
             print_test("Create quiz", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Create quiz", False, str(e))
-        return False
+        assert False
 
 def test_get_quizzes():
     print_section("GET QUIZZES")
@@ -408,10 +419,10 @@ def test_get_quizzes():
             print_test("Get quizzes", True, f"Found {len(quizzes)} quizzes")
         else:
             print_test("Get quizzes", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get quizzes", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 8. AI CONVERSATION TESTS
@@ -433,10 +444,10 @@ def test_start_ai_conversation():
             print_test("Start AI conversation", True, f"Conversation ID: {conversation_id}")
         else:
             print_test("Start AI conversation", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Start AI conversation", False, str(e))
-        return False
+        assert False
 
 def test_get_ai_conversations():
     print_section("GET AI CONVERSATIONS")
@@ -449,10 +460,10 @@ def test_get_ai_conversations():
             print_test("Get AI conversations", True, f"Found {len(conversations)} conversations")
         else:
             print_test("Get AI conversations", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Get AI conversations", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # 9. CLEANUP TEST USER
@@ -467,10 +478,10 @@ def test_delete_user():
             print_test("Delete test user", True, "Test user deleted successfully")
         else:
             print_test("Delete test user", False, f"Status: {response.status_code}, Response: {response.text}")
-        return passed
+        assert passed
     except Exception as e:
         print_test("Delete test user", False, str(e))
-        return False
+        assert False
 
 # ────────────────────────────────────────────────────────────────────────────
 # MAIN TEST RUNNER
