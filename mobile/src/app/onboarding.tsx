@@ -10,37 +10,37 @@ import {
   View,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { Colors, Spacing, Typography, Radius } from '@/constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadow } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
-const ONBOARDING_KEY = 'nexora.onboarding_done';
+const ONBOARDING_KEY = 'learnova.onboarding_done';
 
 const SLIDES = [
   {
     key: '1',
     icon: '▤',
-    iconColor: '#6366F1',
     title: 'Organize everything\nyou learn',
-    body: 'Subjects, notes, and study materials\nall in one focused workspace.',
-    accent: '#6366F1',
+    body: 'Create subjects, take notes, and keep all your study materials in one focused space.',
+    accent: '#5B5FE8',
+    features: ['Subjects & Notes', 'Study Materials', 'File Storage'],
   },
   {
     key: '2',
-    icon: '◷',
-    iconColor: '#8B5CF6',
+    icon: '▶',
     title: 'Plan your\nstudy time',
-    body: 'Turn your academic goals into\nmanageable, focused sessions.',
-    accent: '#8B5CF6',
+    body: 'Build sessions and goals around your schedule. Stay consistent and hit your targets.',
+    accent: '#7C3AED',
+    features: ['Study Sessions', 'Goal Tracking', 'Calendar View'],
   },
   {
     key: '3',
     icon: '✦',
-    iconColor: '#14B8A6',
-    title: 'Track your\nprogress',
-    body: 'See how your study habits and\nquiz performance improve over time.',
-    accent: '#14B8A6',
+    title: 'Study smarter\nwith AI',
+    body: 'Get instant explanations, AI-generated quizzes, and personalized study plans.',
+    accent: '#0D9488',
+    features: ['AI Assistant', 'Smart Quizzes', 'Study Plans'],
   },
 ] as const;
 
@@ -58,28 +58,29 @@ async function markOnboardingDone() {
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState(0);
-  const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const bgAnim = useRef(new Animated.Value(0)).current;
 
   const goToSlide = (index: number) => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(scaleAnim, { toValue: 0.94, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
     ]).start(() => {
       setCurrent(index);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== 'web' }).start();
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== 'web' }),
+      ]).start();
     });
   };
 
   const next = () => {
-    if (current < SLIDES.length - 1) {
-      goToSlide(current + 1);
-    } else {
-      finish();
-    }
+    if (current < SLIDES.length - 1) goToSlide(current + 1);
+    else finish();
   };
-
-  const skip = () => finish();
 
   const finish = async () => {
     await markOnboardingDone();
@@ -90,115 +91,197 @@ export default function OnboardingScreen() {
   const isLast = current === SLIDES.length - 1;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+    <View style={styles.root}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Background glow that changes color per slide */}
-      <View style={[styles.glow, { backgroundColor: slide.accent + '15' }]} />
+      {/* Animated background glow */}
+      <View
+        style={[styles.bgGlow, { backgroundColor: slide.accent + '14' }]}
+        pointerEvents="none"
+      />
 
-      {/* Skip button */}
-      {!isLast && (
-        <Pressable style={styles.skipBtn} onPress={skip} accessibilityRole="button" accessibilityLabel="Skip onboarding">
-          <Text style={styles.skipText}>Skip</Text>
-        </Pressable>
-      )}
-
-      {/* Slide content */}
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        {/* Icon illustration */}
-        <View style={[styles.iconWrap, { backgroundColor: slide.accent + '20', borderColor: slide.accent + '40' }]}>
-          <Text style={[styles.icon, { color: slide.accent }]}>{slide.icon}</Text>
-          {/* Decorative rings */}
-          <View style={[styles.ring1, { borderColor: slide.accent + '20' }]} />
-          <View style={[styles.ring2, { borderColor: slide.accent + '12' }]} />
-        </View>
-
-        {/* Text */}
-        <View style={styles.textBlock}>
-          <Text style={styles.title}>{slide.title}</Text>
-          <Text style={styles.body}>{slide.body}</Text>
-        </View>
-      </Animated.View>
-
-      {/* Bottom controls */}
-      <View style={styles.bottom}>
-        {/* Dot indicators */}
-        <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
-            <Pressable
-              key={i}
-              onPress={() => goToSlide(i)}
-              accessibilityRole="button"
-              accessibilityLabel={`Go to slide ${i + 1}`}
-              hitSlop={8}
-            >
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* Top row: progress + skip */}
+        <View style={styles.topRow}>
+          <View style={styles.progressBar}>
+            {SLIDES.map((_, i) => (
               <View
+                key={i}
                 style={[
-                  styles.dot,
-                  i === current && [styles.dotActive, { backgroundColor: slide.accent }],
+                  styles.progressSegment,
+                  i < current && styles.progressSegmentDone,
+                  i === current && [styles.progressSegmentActive, { backgroundColor: slide.accent }],
                 ]}
               />
+            ))}
+          </View>
+          {!isLast && (
+            <Pressable
+              onPress={finish}
+              hitSlop={12}
+              style={styles.skipBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Skip onboarding"
+            >
+              <Text style={styles.skipText}>Skip</Text>
             </Pressable>
-          ))}
+          )}
         </View>
 
-        {/* Next / Get Started button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.nextBtn,
-            { backgroundColor: slide.accent },
-            pressed && styles.pressed,
+        {/* Main slide content */}
+        <Animated.View
+          style={[
+            styles.slideContent,
+            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
           ]}
-          onPress={next}
-          accessibilityRole="button"
-          accessibilityLabel={isLast ? 'Get started' : 'Next'}
         >
-          <Text style={styles.nextText}>{isLast ? 'Get Started' : 'Next'}</Text>
-          {!isLast && <Text style={styles.nextArrow}>→</Text>}
-        </Pressable>
-      </View>
-    </SafeAreaView>
+          {/* Icon illustration */}
+          <View style={styles.illustrationWrap}>
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: slide.accent + '1A', borderColor: slide.accent + '35' },
+              ]}
+            >
+              <Text style={[styles.icon, { color: slide.accent }]}>{slide.icon}</Text>
+            </View>
+            {/* Decorative rings */}
+            <View style={[styles.ring1, { borderColor: slide.accent + '18' }]} />
+            <View style={[styles.ring2, { borderColor: slide.accent + '0C' }]} />
+          </View>
+
+          {/* Text block */}
+          <View style={styles.textBlock}>
+            <Text style={styles.slideTitle}>{slide.title}</Text>
+            <Text style={styles.slideBody}>{slide.body}</Text>
+          </View>
+
+          {/* Feature chips */}
+          <View style={styles.featureRow}>
+            {slide.features.map((f) => (
+              <View
+                key={f}
+                style={[styles.featureChip, { backgroundColor: slide.accent + '16', borderColor: slide.accent + '30' }]}
+              >
+                <Text style={[styles.featureText, { color: slide.accent }]}>{f}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Bottom controls */}
+        <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom + Spacing.base, Spacing['2xl']) }]}>
+          {/* Dot indicators */}
+          <View style={styles.dots}>
+            {SLIDES.map((_, i) => (
+              <Pressable
+                key={i}
+                onPress={() => goToSlide(i)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Go to slide ${i + 1}`}
+              >
+                <Animated.View
+                  style={[
+                    styles.dot,
+                    i === current && [styles.dotActive, { backgroundColor: slide.accent }],
+                  ]}
+                />
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Next / Get Started */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.nextBtn,
+              { backgroundColor: slide.accent },
+              pressed && styles.pressed,
+            ]}
+            onPress={next}
+            accessibilityRole="button"
+            accessibilityLabel={isLast ? 'Get started' : 'Next'}
+          >
+            <Text style={styles.nextBtnText}>{isLast ? 'Get Started' : 'Continue'}</Text>
+            {!isLast && <Text style={styles.nextArrow}>→</Text>}
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
-  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: '60%' },
-
-  skipBtn: {
+  root: { flex: 1, backgroundColor: Colors.bg },
+  bgGlow: {
     position: 'absolute',
-    top: 56,
-    right: Spacing.xl,
-    zIndex: 10,
-    paddingHorizontal: Spacing.md,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+  },
+
+  // Top bar
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    gap: Spacing.md,
+  },
+  progressBar: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 5,
+    height: 3,
+  },
+  progressSegment: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+  },
+  progressSegmentDone:   { backgroundColor: Colors.textMuted },
+  progressSegmentActive: { height: 3 },
+  skipBtn: {
+    paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
-  skipText: { color: Colors.textMuted, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
+  skipText: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+  },
 
+  // Slide
   slideContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 60,
-    gap: Spacing['3xl'],
+    gap: Spacing['2xl'],
   },
 
-  iconWrap: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 1.5,
+  illustrationWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    marginBottom: Spacing.md,
   },
-  icon: { fontSize: 52 },
-  ring1: { position: 'absolute', width: 175, height: 175, borderRadius: 87.5, borderWidth: 1 },
-  ring2: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1 },
+  iconCircle: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon:  { fontSize: 50 },
+  ring1: { position: 'absolute', width: 168, height: 168, borderRadius: 84, borderWidth: 1 },
+  ring2: { position: 'absolute', width: 206, height: 206, borderRadius: 103, borderWidth: 1 },
 
-  textBlock: { alignItems: 'center', gap: Spacing.md },
-  title: {
+  textBlock: { alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.sm },
+  slideTitle: {
     color: Colors.textPrimary,
     fontSize: Typography.size['3xl'],
     fontWeight: Typography.weight.black,
@@ -206,21 +289,35 @@ const styles = StyleSheet.create({
     letterSpacing: Typography.tracking.tight,
     lineHeight: 36,
   },
-  body: {
+  slideBody: {
     color: Colors.textMuted,
     fontSize: Typography.size.base,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
   },
 
+  featureRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap', justifyContent: 'center' },
+  featureChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  featureText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
+
+  // Bottom
   bottom: {
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing['2xl'],
-    gap: Spacing.xl,
+    gap: Spacing.lg,
   },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
-  dotActive: { width: 24, borderRadius: 4 },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.border,
+  },
+  dotActive: { width: 22, borderRadius: 4 },
 
   nextBtn: {
     height: 56,
@@ -229,8 +326,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
+    ...Shadow.sm,
   },
-  nextText: { color: Colors.white, fontSize: Typography.size.md, fontWeight: Typography.weight.black },
-  nextArrow: { color: Colors.white, fontSize: Typography.size.lg },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.975 }] },
+  nextBtnText: { color: Colors.white, fontSize: Typography.size.md, fontWeight: Typography.weight.black },
+  nextArrow:   { color: Colors.white, fontSize: Typography.size.lg, marginTop: 1 },
+  pressed:     { opacity: 0.78, transform: [{ scale: 0.976 }] },
 });

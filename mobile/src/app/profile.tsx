@@ -1,29 +1,28 @@
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
+  Switch,
   Text,
   View,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateCurrentUser } from '@/services/api/userApi';
 import { useAuth } from '@/context/AuthContext';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import { Avatar, BottomNav, Button, Field, Message, SkeletonCard } from '@/components/ui';
+import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
+import { Avatar, BottomNav, Button, Divider, Field, ListRow, Message, SkeletonCard } from '@/components/ui';
 
 type UserData = {
-  full_name: string;
-  email: string;
-  university: string;
-  degree: string;
-  graduation_year: string;
+  full_name: string; email: string; university: string;
+  degree: string; graduation_year: string;
   push_notifications_enabled: boolean;
   reminder_notifications_enabled: boolean;
 };
@@ -31,53 +30,57 @@ type UserData = {
 export default function ProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [message, setMessage] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [editing, setEditing]   = useState(false);
+  const [msg, setMsg]           = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
   const [userData, setUserData] = useState<UserData>({
-    full_name: '',
-    email: '',
-    university: '',
-    degree: '',
-    graduation_year: '',
-    push_notifications_enabled: true,
-    reminder_notifications_enabled: true,
+    full_name: '', email: '', university: '', degree: '', graduation_year: '',
+    push_notifications_enabled: true, reminder_notifications_enabled: true,
   });
   const [form, setForm] = useState<UserData>({ ...userData });
+
+  // Animations
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  const academicAnim = useRef(new Animated.Value(0)).current;
+  const notifAnim = useRef(new Animated.Value(0)).current;
+  const accountAnim = useRef(new Animated.Value(0)).current;
+  const saveSuccessAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getCurrentUser()
       .then((u) => {
-        const data: UserData = {
-          full_name: u.full_name,
-          email: u.email,
-          university: u.university ?? '',
-          degree: u.degree ?? '',
+        const d: UserData = {
+          full_name: u.full_name, email: u.email,
+          university: u.university ?? '', degree: u.degree ?? '',
           graduation_year: u.graduation_year?.toString() ?? '',
           push_notifications_enabled: u.push_notifications_enabled ?? true,
           reminder_notifications_enabled: u.reminder_notifications_enabled ?? true,
         };
-        setUserData(data);
-        setForm(data);
+        setUserData(d); setForm(d);
       })
       .catch((e) => {
-        if (axios.isAxiosError(e) && e.response?.status === 401) {
-          signOut();
-        } else {
-          setMessage({ text: 'Unable to load your profile.', tone: 'error' });
-        }
+        if (axios.isAxiosError(e) && e.response?.status === 401) signOut();
+        else setMsg({ text: 'Unable to load your profile.', tone: 'error' });
       })
       .finally(() => setLoading(false));
-  }, [router, signOut]);
+  }, []);
+
+  // Entrance animations
+  useEffect(() => {
+    if (!loading) {
+      Animated.stagger(60, [
+        Animated.spring(heroAnim, { toValue: 1, friction: 7, tension: 40, useNativeDriver: true }),
+        Animated.spring(academicAnim, { toValue: 1, friction: 7, tension: 40, useNativeDriver: true }),
+        Animated.spring(notifAnim, { toValue: 1, friction: 7, tension: 40, useNativeDriver: true }),
+        Animated.spring(accountAnim, { toValue: 1, friction: 7, tension: 40, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [loading]);
 
   const save = async () => {
-    if (!form.full_name.trim()) {
-      setMessage({ text: 'Full name is required.', tone: 'error' });
-      return;
-    }
-    setSaving(true);
-    setMessage(null);
+    if (!form.full_name.trim()) { setMsg({ text: 'Full name is required.', tone: 'error' }); return; }
+    setSaving(true); setMsg(null);
     try {
       await updateCurrentUser({
         full_name: form.full_name.trim(),
@@ -87,254 +90,286 @@ export default function ProfileScreen() {
         push_notifications_enabled: form.push_notifications_enabled,
         reminder_notifications_enabled: form.reminder_notifications_enabled,
       });
-      setUserData(form);
-      setEditing(false);
-      setMessage({ text: 'Profile updated successfully.', tone: 'success' });
+      setUserData(form); setEditing(false);
+      setMsg({ text: 'Profile updated successfully.', tone: 'success' });
+      
+      // Celebration animation
+      saveSuccessAnim.setValue(0);
+      Animated.sequence([
+        Animated.spring(saveSuccessAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+        Animated.delay(200),
+        Animated.spring(saveSuccessAnim, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true }),
+      ]).start();
     } catch (e) {
-      if (axios.isAxiosError(e) && e.response?.status === 401) {
-        signOut();
-      } else {
-        setMessage({ text: 'Unable to update your profile. Please try again.', tone: 'error' });
-      }
-    } finally {
-      setSaving(false);
+      if (axios.isAxiosError(e) && e.response?.status === 401) signOut();
+      else setMsg({ text: 'Unable to update profile. Please try again.', tone: 'error' });
+    } finally { setSaving(false); }
+  };
+
+  const updateNotif = async (key: 'push_notifications_enabled' | 'reminder_notifications_enabled', value: boolean) => {
+    const prev = userData[key];
+    setUserData((d) => ({ ...d, [key]: value }));
+    setForm((d) => ({ ...d, [key]: value }));
+    try { await updateCurrentUser({ [key]: value }); }
+    catch {
+      setUserData((d) => ({ ...d, [key]: prev }));
+      setForm((d) => ({ ...d, [key]: prev }));
+      setMsg({ text: 'Unable to update notification settings.', tone: 'error' });
     }
   };
 
-  const cancelEdit = () => {
-    setForm(userData);
-    setEditing(false);
-    setMessage(null);
-  };
-
-  const signOutHandler = () => {
-    if (Platform.OS === 'web') {
-      void signOut();
-      return;
-    }
-
+  const handleSignOut = () => {
+    if (Platform.OS === 'web') { void signOut(); return; }
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: () => { void signOut(); },
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: () => void signOut() },
     ]);
   };
 
-  const initials = userData.full_name;
-
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Profile</Text>
+    <View style={s.root}>
+      <StatusBar barStyle="light-content" />
+      <View style={s.blobGreen} pointerEvents="none" />
+      <View style={s.blobPink}  pointerEvents="none" />
+      <View style={s.blobTeal}  pointerEvents="none" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+
+            {/* Header row */}
+            <View style={s.headerRow}>
+              <Text style={s.pageTitle}>Profile</Text>
               {!loading && !editing && (
                 <Pressable
-                  onPress={() => { setEditing(true); setMessage(null); }}
-                  style={styles.editBtn}
+                  onPress={() => { setEditing(true); setMsg(null); }}
+                  style={s.editBtn}
                   accessibilityRole="button"
-                  accessibilityLabel="Edit profile"
                 >
-                  <Text style={styles.editBtnText}>Edit</Text>
+                  <Text style={s.editBtnText}>Edit</Text>
                 </Pressable>
               )}
             </View>
 
-            {/* Avatar section */}
+            {/* Avatar hero */}
             {loading ? (
-              <View style={styles.avatarSection}>
-                <View style={styles.avatarSkeletonCircle} />
+              <View style={s.avatarSkeleton}>
+                <View style={s.avatarCircleSkeleton} />
                 <View style={{ gap: Spacing.sm, alignItems: 'center' }}>
-                  <View style={[styles.skeletonLine, { width: 140 }]} />
-                  <View style={[styles.skeletonLine, { width: 100, height: 12 }]} />
+                  <View style={[s.skeletonLine, { width: 140 }]} />
+                  <View style={[s.skeletonLine, { width: 100, height: 12 }]} />
                 </View>
               </View>
             ) : (
-              <View style={styles.avatarSection}>
-                <Avatar name={userData.full_name || '?'} size={80} color={Colors.primary} />
-                <View style={styles.identityBlock}>
-                  <Text style={styles.displayName}>{userData.full_name}</Text>
-                  <Text style={styles.displayEmail}>{userData.email}</Text>
-                </View>
-                {Boolean(userData.university) && (
-                  <View style={styles.universityPill}>
-                    <Text style={styles.universityIcon}>⌁</Text>
-                    <Text style={styles.universityText}>{userData.university}</Text>
+              <Animated.View
+                style={[
+                  s.avatarHero,
+                  {
+                    opacity: heroAnim,
+                    transform: [
+                      { translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+                      { scale: heroAnim },
+                    ],
+                  },
+                ]}
+              >
+                <View style={s.avatarGradient}>
+                  <View style={s.avatarRing}>
+                    <Avatar name={userData.full_name || '?'} size={88} color={Colors.primary} />
+                    <Animated.View
+                      style={[
+                        s.successBadge,
+                        {
+                          opacity: saveSuccessAnim,
+                          transform: [{ scale: saveSuccessAnim }],
+                        },
+                      ]}
+                    >
+                      <Text style={s.successBadgeIcon}>✓</Text>
+                    </Animated.View>
                   </View>
-                )}
-              </View>
+                </View>
+                <Text style={s.displayName}>{userData.full_name}</Text>
+                <Text style={s.displayEmail}>{userData.email}</Text>
+                {userData.university ? (
+                  <View style={s.universityPill}>
+                    <Text style={s.universityIcon}>🎓</Text>
+                    <Text style={s.universityText}>{userData.university}</Text>
+                  </View>
+                ) : null}
+              </Animated.View>
             )}
 
-            {message && (
-              <Message tone={message.tone}>{message.text}</Message>
-            )}
+            {msg && <Message tone={msg.tone} onDismiss={() => setMsg(null)}>{msg.text}</Message>}
 
-            {/* Academic info */}
             {loading ? (
               <><SkeletonCard /><SkeletonCard /></>
             ) : (
               <>
-                {/* Academic section */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>Academic Information</Text>
-                  {editing ? (
-                    <View style={styles.sectionCard}>
-                      <Field
-                        label="Full Name"
-                        value={form.full_name}
-                        onChangeText={(v) => setForm((f) => ({ ...f, full_name: v }))}
-                        returnKeyType="next"
-                      />
-                      <Field
-                        label="University"
-                        placeholder="e.g. MIT"
-                        value={form.university}
-                        onChangeText={(v) => setForm((f) => ({ ...f, university: v }))}
-                        returnKeyType="next"
-                      />
-                      <Field
-                        label="Degree / Program"
-                        placeholder="e.g. B.S. Computer Science"
-                        value={form.degree}
-                        onChangeText={(v) => setForm((f) => ({ ...f, degree: v }))}
-                        returnKeyType="next"
-                      />
-                      <Field
-                        label="Graduation Year"
-                        placeholder="e.g. 2027"
-                        value={form.graduation_year}
-                        onChangeText={(v) => setForm((f) => ({ ...f, graduation_year: v }))}
-                        keyboardType="numeric"
-                        returnKeyType="done"
-                      />
+                {/* Academic info */}
+                <Animated.View
+                  style={[
+                    s.section,
+                    {
+                      opacity: academicAnim,
+                      transform: [{ translateY: academicAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+                    },
+                  ]}
+                >
+                  <View style={s.sectionHeader}>
+                    <View style={s.sectionIconWrap}>
+                      <Text style={s.sectionIcon}>📚</Text>
                     </View>
-                  ) : (
-                    <View style={styles.sectionCard}>
-                      {[
-                        { label: 'University', value: userData.university || 'Not set' },
-                        { label: 'Degree / Program', value: userData.degree || 'Not set' },
-                        { label: 'Graduation Year', value: userData.graduation_year || 'Not set' },
-                      ].map(({ label, value }) => (
-                        <View key={label} style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>{label}</Text>
-                          <Text style={[styles.infoValue, !userData[label.toLowerCase().split(' / ')[0].replace(' ', '_') as keyof UserData] && styles.infoValueEmpty]}>
-                            {value}
-                          </Text>
-                        </View>
-                      ))}
+                    <Text style={s.sectionLabel}>Academic Information</Text>
+                  </View>
+                  <View style={s.card}>
+                    {editing ? (
+                      <>
+                        <Field label="Full Name" value={form.full_name} onChangeText={(v) => setForm((f) => ({ ...f, full_name: v }))} returnKeyType="next" />
+                        <Divider />
+                        <Field label="University" placeholder="e.g. MIT" value={form.university} onChangeText={(v) => setForm((f) => ({ ...f, university: v }))} returnKeyType="next" />
+                        <Divider />
+                        <Field label="Degree / Program" placeholder="e.g. B.S. Computer Science" value={form.degree} onChangeText={(v) => setForm((f) => ({ ...f, degree: v }))} returnKeyType="next" />
+                        <Divider />
+                        <Field label="Graduation Year" placeholder="e.g. 2027" value={form.graduation_year} onChangeText={(v) => setForm((f) => ({ ...f, graduation_year: v }))} keyboardType="numeric" returnKeyType="done" />
+                      </>
+                    ) : (
+                      <>
+                        {[
+                          { label: 'University',      value: userData.university || 'Not set', icon: '🏛️' },
+                          { label: 'Degree / Program',value: userData.degree || 'Not set', icon: '🎓' },
+                          { label: 'Graduation Year', value: userData.graduation_year || 'Not set', icon: '📅' },
+                        ].map(({ label, value, icon }, i) => (
+                          <View key={label}>
+                            <View style={s.infoRow}>
+                              <View style={s.infoLeft}>
+                                <Text style={s.infoIcon}>{icon}</Text>
+                                <Text style={s.infoLabel}>{label}</Text>
+                              </View>
+                              <Text style={[s.infoValue, !value.includes('Not') ? {} : s.infoValueEmpty]}>{value}</Text>
+                            </View>
+                            {i < 2 && <Divider />}
+                          </View>
+                        ))}
+                      </>
+                    )}
+                  </View>
+                  {editing && (
+                    <View style={s.editActions}>
+                      <Button label="Cancel" onPress={() => { setForm(userData); setEditing(false); setMsg(null); }} variant="secondary" />
+                      <Button label={saving ? 'Saving…' : 'Save Changes'} onPress={save} loading={saving} />
                     </View>
                   )}
-                </View>
+                </Animated.View>
 
-                {/* Edit actions */}
-                {editing && (
-                  <View style={styles.editActions}>
-                    <Button label="Cancel" onPress={cancelEdit} variant="secondary" />
-                    <Button label={saving ? 'Saving…' : 'Save Changes'} onPress={save} loading={saving} />
-                  </View>
-                )}
-
-                {/* Account section */}
+                {/* Notifications */}
                 {!editing && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>Notifications</Text>
-                    <View style={styles.sectionCard}>
-                      <View style={styles.preferenceRow}>
-                        <View style={styles.preferenceText}>
-                          <Text style={styles.infoValue}>Push notifications</Text>
-                          <Text style={styles.infoLabel}>Allow Nexora to send updates to this device.</Text>
+                  <Animated.View
+                    style={[
+                      s.section,
+                      {
+                        opacity: notifAnim,
+                        transform: [{ translateY: notifAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+                      },
+                    ]}
+                  >
+                    <View style={s.sectionHeader}>
+                      <View style={s.sectionIconWrap}>
+                        <Text style={s.sectionIcon}>🔔</Text>
+                      </View>
+                      <Text style={s.sectionLabel}>Notifications</Text>
+                    </View>
+                    <View style={s.card}>
+                      <View style={s.switchRow}>
+                        <View style={s.switchIconWrap}>
+                          <Text style={s.switchEmoji}>📱</Text>
+                        </View>
+                        <View style={s.switchText}>
+                          <Text style={s.switchTitle}>Push notifications</Text>
+                          <Text style={s.switchSubtitle}>Study updates and reminders</Text>
                         </View>
                         <Switch
                           value={userData.push_notifications_enabled}
-                          onValueChange={async (value) => {
-                            const previous = userData.push_notifications_enabled;
-                            const next = { ...form, push_notifications_enabled: value };
-                            setUserData((current) => ({ ...current, push_notifications_enabled: value }));
-                            setForm(next);
-                            try {
-                              await updateCurrentUser({ push_notifications_enabled: value });
-                            } catch {
-                              setUserData((current) => ({ ...current, push_notifications_enabled: previous }));
-                              setForm((current) => ({ ...current, push_notifications_enabled: previous }));
-                              setMessage({ text: 'Unable to update notification settings.', tone: 'error' });
-                            }
-                          }}
+                          onValueChange={(v) => void updateNotif('push_notifications_enabled', v)}
                           trackColor={{ false: Colors.border, true: Colors.primary }}
                           thumbColor={Colors.white}
+                          ios_backgroundColor={Colors.border}
                         />
                       </View>
-                      <View style={styles.preferenceRow}>
-                        <View style={styles.preferenceText}>
-                          <Text style={styles.infoValue}>Study reminders</Text>
-                          <Text style={styles.infoLabel}>Receive scheduled reminder notifications.</Text>
+                      <Divider />
+                      <View style={s.switchRow}>
+                        <View style={s.switchIconWrap}>
+                          <Text style={s.switchEmoji}>⏰</Text>
+                        </View>
+                        <View style={s.switchText}>
+                          <Text style={s.switchTitle}>Study reminders</Text>
+                          <Text style={s.switchSubtitle}>Scheduled session alerts</Text>
                         </View>
                         <Switch
                           value={userData.reminder_notifications_enabled}
-                          onValueChange={async (value) => {
-                            const previous = userData.reminder_notifications_enabled;
-                            setUserData((current) => ({ ...current, reminder_notifications_enabled: value }));
-                            setForm((current) => ({ ...current, reminder_notifications_enabled: value }));
-                            try {
-                              await updateCurrentUser({ reminder_notifications_enabled: value });
-                            } catch {
-                              setUserData((current) => ({ ...current, reminder_notifications_enabled: previous }));
-                              setForm((current) => ({ ...current, reminder_notifications_enabled: previous }));
-                              setMessage({ text: 'Unable to update reminder settings.', tone: 'error' });
-                            }
-                          }}
+                          onValueChange={(v) => void updateNotif('reminder_notifications_enabled', v)}
                           trackColor={{ false: Colors.border, true: Colors.primary }}
                           thumbColor={Colors.white}
+                          ios_backgroundColor={Colors.border}
                         />
                       </View>
                     </View>
-                  </View>
+                  </Animated.View>
                 )}
 
+                {/* Account */}
                 {!editing && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>Account</Text>
-                    <View style={styles.sectionCard}>
-                      <Pressable
-                        onPress={signOutHandler}
-                        style={({ pressed }) => [styles.accountRow, pressed && { opacity: 0.7 }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Sign out"
-                      >
-                        <Text style={styles.accountRowIcon}>⏻</Text>
-                        <Text style={styles.signOutText}>Sign Out</Text>
-                        <Text style={styles.accountRowChevron}>›</Text>
-                      </Pressable>
+                  <Animated.View
+                    style={[
+                      s.section,
+                      {
+                        opacity: accountAnim,
+                        transform: [{ translateY: accountAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+                      },
+                    ]}
+                  >
+                    <View style={s.sectionHeader}>
+                      <View style={s.sectionIconWrap}>
+                        <Text style={s.sectionIcon}>⚙️</Text>
+                      </View>
+                      <Text style={s.sectionLabel}>Account</Text>
+                    </View>
+                    <View style={s.card}>
                       <Pressable
                         onPress={() => router.push('/notifications' as never)}
-                        style={({ pressed }) => [styles.accountRow, pressed && { opacity: 0.7 }]}
+                        style={s.accountRow}
                         accessibilityRole="button"
-                        accessibilityLabel="Open notifications"
                       >
-                        <Text style={styles.accountRowIcon}>◌</Text>
-                        <Text style={styles.signOutText}>Notification inbox</Text>
-                        <Text style={styles.accountRowChevron}>›</Text>
+                        <View style={s.accountLeft}>
+                          <View style={[s.accountIconWrap, { backgroundColor: Colors.primary + '15' }]}>
+                            <Text style={s.accountIcon}>📬</Text>
+                          </View>
+                          <Text style={s.accountLabel}>Notification Inbox</Text>
+                        </View>
+                        <Text style={s.accountChevron}>›</Text>
+                      </Pressable>
+                      <Divider />
+                      <Pressable
+                        onPress={handleSignOut}
+                        style={s.accountRow}
+                        accessibilityRole="button"
+                      >
+                        <View style={s.accountLeft}>
+                          <View style={[s.accountIconWrap, { backgroundColor: Colors.error + '15' }]}>
+                            <Text style={s.accountIcon}>🚪</Text>
+                          </View>
+                          <Text style={[s.accountLabel, s.accountLabelDanger]}>Sign Out</Text>
+                        </View>
+                        <Text style={[s.accountChevron, { color: Colors.error }]}>›</Text>
                       </Pressable>
                     </View>
-                  </View>
+                  </Animated.View>
                 )}
 
                 {/* App info */}
                 {!editing && (
-                  <View style={styles.appInfo}>
-                    <Text style={styles.appName}>nexora</Text>
-                    <Text style={styles.appVersion}>Version 1.0.0 · Learn smarter. Stay organized.</Text>
+                  <View style={s.appInfo}>
+                    <Text style={s.appName}>learnova</Text>
+                    <Text style={s.appVersion}>Version 1.0.0 · Learn smarter, achieve more.</Text>
                   </View>
                 )}
               </>
@@ -348,46 +383,178 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
-  safe: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: 100, gap: Spacing.xl },
+const s = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: Colors.bg },
+  blobGreen: { position: 'absolute', top: -50,  left: -70,  width: 200, height: 200, borderRadius: 100, backgroundColor: '#16A34A12' },
+  blobPink:  { position: 'absolute', top: 140,  right: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: '#BE185D0E' },
+  blobTeal:  { position: 'absolute', bottom: 180, left: -60, width: 180, height: 180, borderRadius: 90,  backgroundColor: '#0EA5A00A' },
+  scroll: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: 120, gap: Spacing.xl },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { color: Colors.textPrimary, fontSize: Typography.size['3xl'], fontWeight: Typography.weight.black, letterSpacing: Typography.tracking.tight },
-  editBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
-  editBtnText: { color: Colors.primaryLight, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
+  headerRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  pageTitle:  { color: Colors.textPrimary, fontSize: Typography.size['3xl'], fontWeight: Typography.weight.black, letterSpacing: Typography.tracking.tight },
+  editBtn:    { 
+    paddingHorizontal: Spacing.md, 
+    paddingVertical: Spacing.sm, 
+    backgroundColor: Colors.primary + '15',
+    borderRadius: Radius.lg, 
+    borderWidth: 1, 
+    borderColor: Colors.primary + '30',
+    ...Shadow.sm,
+  },
+  editBtnText:{ color: Colors.primary, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
 
-  avatarSection: { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg },
-  avatarSkeletonCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.surfaceElevated },
-  identityBlock: { alignItems: 'center', gap: Spacing.xs },
-  displayName: { color: Colors.textPrimary, fontSize: Typography.size.xl, fontWeight: Typography.weight.black },
-  displayEmail: { color: Colors.textMuted, fontSize: Typography.size.sm },
-  universityPill: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: 7, borderWidth: 1, borderColor: Colors.border },
-  universityIcon: { color: Colors.primaryLight, fontSize: 15 },
-  universityText: { color: Colors.textSecondary, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium },
+  avatarSkeleton:      { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.xl },
+  avatarCircleSkeleton:{ width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.surfaceElevated },
+  skeletonLine:        { height: 16, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm },
 
-  skeletonLine: { height: 16, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm },
+  avatarHero:    { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg },
+  avatarGradient: {
+    position: 'relative',
+    padding: Spacing.md,
+    borderRadius: 60,
+    backgroundColor: Colors.primary + '10',
+  },
+  avatarRing: {
+    position: 'relative',
+    padding: 4,
+    borderRadius: 52,
+    borderWidth: 3,
+    borderColor: Colors.primary + '40',
+    backgroundColor: Colors.surface,
+    ...Shadow.md,
+  },
+  successBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.success,
+    borderWidth: 3,
+    borderColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.lg,
+  },
+  successBadgeIcon: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: Typography.weight.bold,
+  },
+  displayName:    { color: Colors.textPrimary, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.black, letterSpacing: Typography.tracking.tight },
+  displayEmail:   { color: Colors.textMuted, fontSize: Typography.size.sm },
+  universityPill: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    backgroundColor: Colors.primary + '15', borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 8,
+    borderWidth: 1, borderColor: Colors.primary + '30',
+    ...Shadow.sm,
+  },
+  universityIcon: { fontSize: 14 },
+  universityText: { color: Colors.primary, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
 
-  section: { gap: Spacing.sm },
-  sectionLabel: { color: Colors.textMuted, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, letterSpacing: 1.5, textTransform: 'uppercase', paddingHorizontal: Spacing.xs },
-  sectionCard: { backgroundColor: Colors.surface, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden', padding: Spacing.lg, gap: Spacing.md },
+  section:      { gap: Spacing.md },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '15',
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionIcon: {
+    fontSize: 14,
+  },
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: Typography.size.xs, 
+    fontWeight: Typography.weight.bold,
+    letterSpacing: 1.5, 
+    textTransform: 'uppercase',
+  },
+  card: {
+    backgroundColor: Colors.surface, 
+    borderRadius: Radius['2xl'],
+    borderWidth: 1, 
+    borderColor: Colors.border,
+    padding: Spacing.lg, 
+    gap: Spacing.md,
+    ...Shadow.md,
+  },
 
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.xs, borderBottomWidth: 1, borderColor: Colors.border },
-  infoLabel: { color: Colors.textMuted, fontSize: Typography.size.sm },
-  infoValue: { color: Colors.textPrimary, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
-  infoValueEmpty: { color: Colors.textMuted, fontStyle: 'italic', fontWeight: Typography.weight.regular },
+  infoRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.xs },
+  infoLeft:      { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  infoIcon:      { fontSize: 16 },
+  infoLabel:     { color: Colors.textSecondary, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium },
+  infoValue:     { color: Colors.textPrimary, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold },
+  infoValueEmpty:{ color: Colors.textMuted, fontStyle: 'italic', fontWeight: Typography.weight.regular },
 
   editActions: { flexDirection: 'row', gap: Spacing.md },
 
-  accountRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.xs },
-  accountRowIcon: { color: Colors.error, fontSize: 18, width: 24, textAlign: 'center' },
-  accountRowChevron: { color: Colors.textMuted, fontSize: Typography.size.xl, marginLeft: 'auto' },
-  signOutText: { color: Colors.error, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold, flex: 1 },
+  switchRow:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.xs },
+  switchIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '15',
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchEmoji:   { fontSize: 16 },
+  switchText:    { flex: 1, gap: 3 },
+  switchTitle:   { color: Colors.textPrimary, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold },
+  switchSubtitle:{ color: Colors.textMuted, fontSize: Typography.size.xs },
 
-  appInfo: { alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.lg },
-  preferenceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
-  preferenceText: { flex: 1, gap: Spacing.xs },
-  appName: { color: Colors.textMuted, fontSize: Typography.size.lg, fontWeight: Typography.weight.black, letterSpacing: 1 },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+  },
+  accountLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
+  },
+  accountIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  accountIcon: {
+    fontSize: 18,
+  },
+  accountLabel: {
+    color: Colors.textPrimary,
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+  },
+  accountLabelDanger: {
+    color: Colors.error,
+  },
+  accountChevron: {
+    color: Colors.textMuted,
+    fontSize: 24,
+    fontWeight: Typography.weight.regular,
+  },
+
+  appInfo:    { alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.xl },
+  appName:    { color: Colors.textMuted, fontSize: Typography.size.lg, fontWeight: Typography.weight.black, letterSpacing: 1 },
   appVersion: { color: Colors.textMuted, fontSize: Typography.size.xs, textAlign: 'center' },
 });
