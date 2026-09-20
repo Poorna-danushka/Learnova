@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateCurrentUser } from '@/services/api/userApi';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
-import { Avatar, BottomNav, Button, Divider, Field, ListRow, Message, SkeletonCard } from '@/components/ui';
+import { Avatar, Button, Divider, Field, ListRow, Message, SkeletonCard } from '@/components/ui';
 
 type UserData = {
   full_name: string; email: string; university: string;
@@ -377,8 +377,6 @@ export default function ProfileScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      <BottomNav active="Profile" onNavigate={(r) => router.push(r as never)} />
     </View>
   );
 }

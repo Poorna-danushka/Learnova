@@ -27,6 +27,7 @@ class QuizQuestion(Base):
     options: Mapped[list] = mapped_column(JSON, nullable=False)
     correct_option: Mapped[int] = mapped_column(Integer, nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    explanation: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
     quiz: Mapped[Quiz] = relationship(back_populates="questions")
 
 

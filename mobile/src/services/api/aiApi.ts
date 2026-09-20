@@ -133,9 +133,11 @@ export async function deleteSavedStudyPlan(id: number): Promise<void> {
 // ─── 4. AI Quiz Generation ────────────────────────────────────────────────────
 /**
  * POST /quizzes/generate
- * Generates a quiz preview from a subject or study material.
+ * Generates a quiz preview from a module, study material, or a single note.
  * The result is NOT automatically saved — user must explicitly save it.
- * Exactly one of subject_id or material_id must be provided.
+ * Exactly one of module_id, material_id, or note_id must be provided.
+ * When use_own_content is true the backend restricts context to the user's
+ * own notes + uploaded materials (no AI general knowledge fallback).
  */
 export async function generateQuiz(
   req: QuizGenerationRequest
@@ -196,10 +198,23 @@ export async function getAIMessages(id: number): Promise<AIMessage[]> {
 }
 
 export async function sendAIMessage(id: number, content: string): Promise<AIMessage[]> {
-  const response = await apiClient.post<AIMessage[]>(
-    `/ai/conversations/${id}/messages`,
-    { content },
-    { timeout: AI_REQUEST_TIMEOUT_MS },
-  );
-  return response.data;
+  const endpoint = `/ai/conversations/${id}/messages`;
+  try {
+    const response = await apiClient.post<AIMessage[]>(
+      endpoint,
+      { content },
+      { timeout: AI_REQUEST_TIMEOUT_MS },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (process.env.NODE_ENV !== 'production') {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      console.warn('[AI] send message failed', {
+        stage: 'send_message',
+        endpoint,
+        status: status ?? 'network',
+      });
+    }
+    throw error;
+  }
 }

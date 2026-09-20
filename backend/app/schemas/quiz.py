@@ -33,6 +33,7 @@ class QuestionCreate(BaseModel):
     options: list[str] = Field(min_length=2, max_length=8)
     correct_option: int = Field(ge=0)
     position: int = Field(default=0, ge=0)
+    explanation: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("prompt")
     @classmethod

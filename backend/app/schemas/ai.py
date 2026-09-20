@@ -64,8 +64,12 @@ class StudyPlanResponse(BaseModel):
 class QuizGenerationRequest(BaseModel):
     module_id: int | None = Field(default=None, gt=0)
     material_id: int | None = Field(default=None, gt=0)
+    note_id: int | None = Field(default=None, gt=0)
     question_count: int = Field(default=5, ge=1, le=20)
     topic: str | None = Field(default=None, max_length=500)
+    # When True the AI is instructed to draw ONLY from the user's own content.
+    # When False (default) the AI may supplement with general knowledge.
+    use_own_content: bool = Field(default=False)
 
     @field_validator("topic")
     @classmethod
@@ -75,16 +79,30 @@ class QuizGenerationRequest(BaseModel):
         return value.strip() if value is not None else value
 
     @model_validator(mode="after")
-    def require_single_source(self):
-        if (self.module_id is None) == (self.material_id is None):
-            raise ValueError("Provide exactly one module_id or material_id.")
+    def require_valid_source(self):
+        # Allowed combinations:
+        #   module_id only
+        #   material_id only
+        #   note_id only
+        #   material_id + note_id  (combined upload + note source)
+        if self.module_id is not None:
+            # module_id cannot be combined with the others
+            if self.material_id is not None or self.note_id is not None:
+                raise ValueError("module_id cannot be combined with material_id or note_id.")
+        else:
+            if self.material_id is None and self.note_id is None:
+                raise ValueError(
+                    "Provide at least one of: module_id, material_id, or note_id."
+                )
         return self
 
 
 class PracticeQuestionRequest(BaseModel):
     module_id: int | None = Field(default=None, gt=0)
     material_id: int | None = Field(default=None, gt=0)
+    note_id: int | None = Field(default=None, gt=0)
     topic: str | None = Field(default=None, max_length=500)
+    use_own_content: bool = Field(default=False)
 
     @field_validator("topic")
     @classmethod
@@ -94,9 +112,15 @@ class PracticeQuestionRequest(BaseModel):
         return value.strip() if value is not None else value
 
     @model_validator(mode="after")
-    def require_single_source(self):
-        if (self.module_id is None) == (self.material_id is None):
-            raise ValueError("Provide exactly one module_id or material_id.")
+    def require_valid_source(self):
+        if self.module_id is not None:
+            if self.material_id is not None or self.note_id is not None:
+                raise ValueError("module_id cannot be combined with material_id or note_id.")
+        else:
+            if self.material_id is None and self.note_id is None:
+                raise ValueError(
+                    "Provide at least one of: module_id, material_id, or note_id."
+                )
         return self
 
 

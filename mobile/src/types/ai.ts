@@ -2,14 +2,14 @@
 // Mirrors backend/app/schemas/ai.py exactly.
 // Import from '@/types/ai' in services and components.
 
-// â”€â”€â”€ Note Summarization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Note Summarization ──────────────────────────────────────────────────────
 /** Response from POST /notes/{note_id}/summarize */
 export interface NoteSummaryResponse {
   note_id: number;
   summary: string;
 }
 
-// â”€â”€â”€ Study-Material Q&A â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Study-Material Q&A ──────────────────────────────────────────────────────
 /** Request body for POST /study-materials/{material_id}/ask */
 export interface MaterialQuestionRequest {
   question: string;
@@ -21,11 +21,11 @@ export interface MaterialQuestionResponse {
   answer: string;
 }
 
-// â”€â”€â”€ AI Study-Plan Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AI Study-Plan Generation ─────────────────────────────────────────────────
 /** Request body for POST /study-plans/generate
  *  - module_ids: [] means all subjects
- *  - days: 1â€“30 (default 7)
- *  - minutes_per_day: 15â€“480 (default 60)
+ *  - days: 1–30 (default 7)
+ *  - minutes_per_day: 15–480 (default 60)
  *  - priorities: optional free-text up to 2000 chars
  */
 export interface StudyPlanRequest {
@@ -62,17 +62,21 @@ export interface AIMessage {
   created_at: string;
 }
 
-// â”€â”€â”€ AI Quiz Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AI Quiz Generation ───────────────────────────────────────────────────────
 /** Request body for POST /quizzes/generate
- *  Exactly one of module_id or material_id must be provided.
- *  - question_count: 1â€“20 (default 5)
+ *  Provide exactly one of: module_id, material_id, or note_id.
+ *  use_own_content = true  → restrict AI to the user's own notes + materials only
+ *  use_own_content = false → AI may draw on general knowledge as well
+ *  - question_count: 1–20 (default 5)
  *  - topic: optional hint up to 500 chars
  */
 export interface QuizGenerationRequest {
   module_id?: number;
   material_id?: number;
+  note_id?: number;
   question_count?: number;
   topic?: string;
+  use_own_content?: boolean;
 }
 
 /** A single generated quiz question (not persisted) */
@@ -91,22 +95,22 @@ export interface QuizExplanationResponse {
   explanation: string;
 }
 
-/** Response from POST /quizzes/generate (ephemeral â€” not saved to DB) */
+/** Response from POST /quizzes/generate (ephemeral – not saved to DB) */
 export interface GeneratedQuizResponse {
   title: string;
   questions: GeneratedQuizQuestion[];
 }
 
-// â”€â”€â”€ Shared AI Error Type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared AI Error Type ─────────────────────────────────────────────────────
 /**
  * Normalised error kind returned by parseAIError().
  *
- * rate_limit  â€” HTTP 429, rolling 24-hour quota exhausted
- * validation  â€” HTTP 422, invalid request payload
- * not_found   â€” HTTP 404, resource doesn't exist / file missing
- * server      â€” HTTP 502/503, upstream AI error or not configured
- * network     â€” timeout or no response
- * unknown     â€” anything else
+ * rate_limit  – HTTP 429, rolling 24-hour quota exhausted
+ * validation  – HTTP 422, invalid request payload
+ * not_found   – HTTP 404, resource doesn't exist / file missing
+ * server      – HTTP 502/503, upstream AI error or not configured
+ * network     – timeout or no response
+ * unknown     – anything else
  */
 export type AIErrorKind =
   | 'rate_limit'
