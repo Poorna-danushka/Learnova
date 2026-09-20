@@ -90,6 +90,7 @@ def save_generated_quiz(
             options=generated.options,
             correct_option=correct_option,
             position=position,
+            explanation=generated.explanation or None,
         ))
     db.commit()
     db.refresh(quiz)
@@ -104,6 +105,27 @@ def _resolve_source_context(
     current_user: User,
     db: Session,
 ) -> str:
+    # ── Single note as source ─────────────────────────────────────────────────
+    if data.note_id is not None:
+        note = db.query(Note).filter(
+            Note.id == data.note_id,
+            Note.owner_id == current_user.id,
+        ).first()
+        if note is None:
+            raise HTTPException(404, "Note not found.")
+        own_content_instruction = (
+            "\n\nIMPORTANT: Generate ALL questions exclusively from the content "
+            "provided above. Do not use any external or general knowledge."
+            if data.use_own_content
+            else ""
+        )
+        return (
+            f"Note title: {note.title}\n\n"
+            f"{note.content}"
+            f"{own_content_instruction}"
+        )
+
+    # ── Single uploaded material as source ────────────────────────────────────
     if data.material_id is not None:
         material = db.query(StudyMaterial).filter(
             StudyMaterial.id == data.material_id,
@@ -115,10 +137,18 @@ def _resolve_source_context(
         if not path.is_file():
             raise HTTPException(404, "Stored file not found.")
         try:
-            return extract_material_text(path, material.content_type)
+            text = extract_material_text(path, material.content_type)
         except AIInputError as exc:
             raise HTTPException(422, detail=str(exc)) from exc
+        own_content_instruction = (
+            "\n\nIMPORTANT: Generate ALL questions exclusively from the content "
+            "provided above. Do not use any external or general knowledge."
+            if data.use_own_content
+            else ""
+        )
+        return f"Material: {material.original_filename}\n\n{text}{own_content_instruction}"
 
+    # ── Whole module (notes + materials) as source ────────────────────────────
     subject = db.query(Module).filter(
         Module.id == data.module_id,
         Module.owner_id == current_user.id,
@@ -126,13 +156,11 @@ def _resolve_source_context(
     if subject is None:
         raise HTTPException(404, "Module not found.")
 
-    # Collect all notes for this subject
     notes = db.query(Note).filter(
         Note.module_id == subject.id,
         Note.owner_id == current_user.id,
     ).all()
 
-    # Collect all study material text for this subject
     materials = db.query(StudyMaterial).filter(
         StudyMaterial.module_id == subject.id,
         StudyMaterial.owner_id == current_user.id,
@@ -143,13 +171,11 @@ def _resolve_source_context(
         f"Description: {subject.description or 'No description provided.'}",
     ]
 
-    # Add notes content
     if notes:
         context_parts.append("\n--- NOTES ---")
         for note in notes:
             context_parts.append(f"Note: {note.title}\n{note.content}")
 
-    # Add study material text
     if materials:
         context_parts.append("\n--- STUDY MATERIALS ---")
         for material in materials:
@@ -160,6 +186,12 @@ def _resolve_source_context(
                     context_parts.append(f"Material: {material.original_filename}\n{text}")
                 except AIInputError:
                     pass  # skip unreadable files silently
+
+    if data.use_own_content:
+        context_parts.append(
+            "\nIMPORTANT: Generate ALL questions exclusively from the content "
+            "provided above. Do not use any external or general knowledge."
+        )
 
     return "\n\n".join(context_parts)
 

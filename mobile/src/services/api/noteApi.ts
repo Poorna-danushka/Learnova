@@ -19,6 +19,10 @@ export type NoteInput = {
 export const getNotes = async (moduleId?: number): Promise<Note[]> =>
   (await apiClient.get<Note[]>('/notes', { params: { module_id: moduleId } })).data;
 
+/** Convenience wrapper — fetches only notes belonging to a specific module. */
+export const getNotesByModule = async (moduleId: number): Promise<Note[]> =>
+  getNotes(moduleId);
+
 export const getNoteById = async (id: number): Promise<Note> =>
   (await apiClient.get<Note>(`/notes/${id}`)).data;
 

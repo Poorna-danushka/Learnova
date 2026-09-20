@@ -42,6 +42,25 @@ import {
 // development working when no Expo public variable is provided.
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://127.0.0.1:8000';
 export const API_BASE_URL = BASE_URL;
+const IS_DEVELOPMENT = process.env.NODE_ENV !== 'production';
+
+const logApiFailure = (error: unknown) => {
+  if (!IS_DEVELOPMENT || !axios.isAxiosError(error)) return;
+
+  const config = error.config;
+  const responseDetail = error.response?.data;
+  const detail = typeof responseDetail === 'string'
+    ? responseDetail
+    : responseDetail && typeof responseDetail === 'object' && 'detail' in responseDetail
+      ? responseDetail.detail
+      : undefined;
+  console.warn('[API] request failed', {
+    method: config?.method?.toUpperCase(),
+    endpoint: config?.url,
+    status: error.response?.status ?? 'network',
+    detail: typeof detail === 'string' ? detail : undefined,
+  });
+};
 
 // ─── Create the Axios instance ────────────────────────────────────────────────
 const apiClient = axios.create({
@@ -83,6 +102,7 @@ export const setAuthExpiredHandler = (handler: (() => void) | null) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
+    logApiFailure(error);
     if (!axios.isAxiosError(error) || error.response?.status !== 401) {
       return Promise.reject(error);
     }

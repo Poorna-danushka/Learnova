@@ -45,7 +45,18 @@ def send_email(*, to: str, subject: str, html: str) -> None:
         logger.error("Resend email timeout: %s", exc.__class__.__name__)
         raise EmailDeliveryError("Email provider timed out.") from exc
     except httpx.HTTPStatusError as exc:
-        logger.error("Resend email rejected: status=%s", exc.response.status_code)
+        logger.error(
+            "Resend email rejected: status=%s body=%s",
+            exc.response.status_code,
+            exc.response.text,
+        )
+        if 400 <= exc.response.status_code < 500 and APP_ENV != "production":
+            logger.warning(
+                "Email delivery to '%s' skipped in development due to Resend sandbox restriction (status %s). Account action completed.",
+                to,
+                exc.response.status_code,
+            )
+            return
         raise EmailDeliveryError("Email provider rejected the message.") from exc
     except httpx.RequestError as exc:
         logger.error("Resend email connection error: %s", exc.__class__.__name__)

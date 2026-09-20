@@ -14,6 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database.database import Base, get_db
+import app.models  # noqa: F401 - Register all models with Base.metadata
 from main import app
 
 # In-memory SQLite or test database URL

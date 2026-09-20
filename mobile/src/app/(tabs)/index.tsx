@@ -20,7 +20,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
 import {
   Avatar,
-  BottomNav,
   ProgressBar,
   SkeletonCard,
   SkeletonLine,
@@ -559,8 +558,6 @@ export default function HomeScreen() {
         onClose={() => setShowModuleSelector(false)}
         title="Select Module for Note"
       />
-
-      <BottomNav active="Home" onNavigate={(route) => router.push(route as never)} />
     </View>
   );
 }

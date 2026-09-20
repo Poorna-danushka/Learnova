@@ -34,7 +34,7 @@ import { getModules, Module as Subject } from '@/services/api/moduleApi';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Radius, Spacing, Typography, Shadow } from '@/constants/theme';
 import {
-  Badge, BottomNav, Button, Chip, EmptyState, Field,
+  Badge, Button, Chip, EmptyState, Field,
   Message, ProgressBar, SegmentedControl, SkeletonCard,
 } from '@/components/ui';
 import {
@@ -626,8 +626,6 @@ export default function PlanningScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       </SafeAreaView>
-
-      <BottomNav active="Planner" onNavigate={(r) => router.push(r as never)} />
     </View>
   );
 }

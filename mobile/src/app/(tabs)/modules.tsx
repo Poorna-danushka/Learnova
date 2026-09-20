@@ -15,7 +15,6 @@ import {
 import { useRouter } from 'expo-router';
 import {
   Screen,
-  BottomNav,
   SearchInput,
   EmptyState,
   SkeletonCard,
@@ -477,8 +476,6 @@ export default function ModulesScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Screen>
-
-      <BottomNav active="Modules" onNavigate={(r) => router.push(r as never)} />
 
       <DeleteConfirmModal
         visible={!!moduleToDelete}

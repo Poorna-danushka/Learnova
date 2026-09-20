@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { HomeIcon, ModulesIcon, PlannerIcon, NotesIcon, ProfileIcon } from '@/components/NavIcons';
 
 // ─── Re-export colors for backwards compatibility ─────────────────────────────
 export const colors = {
@@ -964,11 +965,11 @@ export function ListRow({
 
 // ─── Bottom Navigation ────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { label: 'Home',    route: '/(tabs)',   icon: '⌂'  },
-  { label: 'Modules', route: '/modules',  icon: '▤'  },
-  { label: 'Planner', route: '/planning', icon: '◷'  },
-  { label: 'Notes',   route: '/notes',    icon: '✎'  },
-  { label: 'Profile', route: '/profile',  icon: '◉'  },
+  { label: 'Home',    route: '/(tabs)',   IconComponent: HomeIcon },
+  { label: 'Modules', route: '/modules',  IconComponent: ModulesIcon },
+  { label: 'Planner', route: '/planning', IconComponent: PlannerIcon },
+  { label: 'Notes',   route: '/notes',    IconComponent: NotesIcon },
+  { label: 'Profile', route: '/profile',  IconComponent: ProfileIcon },
 ] as const;
 
 export function BottomNav({
@@ -987,7 +988,7 @@ export function BottomNav({
         { bottom: Math.max(Spacing.base, insets.bottom + Spacing.xs) },
       ]}
     >
-      {NAV_ITEMS.map(({ label, route, icon }) => {
+      {NAV_ITEMS.map(({ label, route, IconComponent }) => {
         const isActive = active === label;
         return (
           <Pressable
@@ -1008,9 +1009,11 @@ export function BottomNav({
                 isActive && styles.navIconWrapActive,
               ]}
             >
-              <Text style={[styles.navIcon, isActive && styles.navIconActive]}>
-                {icon}
-              </Text>
+              <IconComponent
+                color={isActive ? Colors.primaryLight : Colors.textMuted}
+                size={20}
+                active={isActive}
+              />
             </View>
             <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
               {label}
@@ -1164,6 +1167,7 @@ const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: Colors.bg },
   scroll:  { paddingBottom: 132 },
   content: {
+    flex: 1,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     gap: Spacing.xl,

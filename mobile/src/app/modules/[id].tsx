@@ -7,13 +7,14 @@ import {
   Pressable,
   RefreshControl,
   Alert,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Spacing, Typography, Radius, Shadow } from '@/constants/theme';
 import { Screen, BottomNav, SkeletonCard, EmptyState } from '@/components/ui';
 import { getModules, Module } from '@/services/api/moduleApi';
 import { getNotes, Note } from '@/services/api/noteApi';
+import { getQuizzes, Quiz } from '@/services/api/quizApi';
+import { getStudyMaterials, StudyMaterial } from '@/services/api/studyMaterialApi';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
@@ -25,6 +26,8 @@ export default function ModuleDetailScreen() {
 
   const [module, setModule] = useState<Module | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -32,9 +35,15 @@ export default function ModuleDetailScreen() {
     try {
       if (!isRefresh) setLoading(true);
 
-      const [modules, allNotes] = await Promise.all([getModules(), getNotes()]);
+      const moduleId = Number(id);
+      const [modules, allNotes, moduleQuizzes, allMaterials] = await Promise.all([
+        getModules(),
+        getNotes(),
+        getQuizzes(moduleId),
+        getStudyMaterials(),
+      ]);
 
-      const foundModule = modules.find((m) => m.id === Number(id));
+      const foundModule = modules.find((m) => m.id === moduleId);
       if (!foundModule) {
         Alert.alert('Error', 'Module not found');
         router.back();
@@ -42,7 +51,9 @@ export default function ModuleDetailScreen() {
       }
 
       setModule(foundModule);
-      setNotes(allNotes.filter((n) => n.module_id === Number(id)));
+      setNotes(allNotes.filter((n) => n.module_id === moduleId));
+      setQuizzes(moduleQuizzes);
+      setMaterials(allMaterials.filter((m) => m.module_id === moduleId));
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         signOut();
@@ -131,12 +142,12 @@ export default function ModuleDetailScreen() {
                   </View>
                   <View style={[s.statPill, { backgroundColor: '#10B98112', borderColor: '#10B98130' }]}>
                     <Text style={s.statIcon}>📄</Text>
-                    <Text style={[s.statValue, { color: '#10B981' }]}>0</Text>
+                    <Text style={[s.statValue, { color: '#10B981' }]}>{materials.length}</Text>
                     <Text style={s.statLabel}>Materials</Text>
                   </View>
                   <View style={[s.statPill, { backgroundColor: '#F59E0B12', borderColor: '#F59E0B30' }]}>
                     <Text style={s.statIcon}>🎯</Text>
-                    <Text style={[s.statValue, { color: '#F59E0B' }]}>0</Text>
+                    <Text style={[s.statValue, { color: '#F59E0B' }]}>{quizzes.length}</Text>
                     <Text style={s.statLabel}>Quizzes</Text>
                   </View>
                 </View>
@@ -170,6 +181,69 @@ export default function ModuleDetailScreen() {
                     </Pressable>
                   ))}
                 </View>
+              </View>
+
+              {/* ── Module Quizzes ── */}
+              <View style={s.section}>
+                <View style={s.sectionHeaderRow}>
+                  <Text style={s.sectionTitle}>🎯 Saved Quizzes</Text>
+                  <Pressable
+                    onPress={() => router.push(`/quizzes?module_id=${id}` as never)}
+                    hitSlop={8}
+                  >
+                    <Text style={[s.seeAllText, { color: '#F59E0B' }]}>
+                      {quizzes.length > 0 ? 'View All →' : '+ Generate'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {quizzes.length === 0 ? (
+                  <View style={s.emptyCard}>
+                    <View style={[s.emptyIconWrap, { backgroundColor: '#F59E0B14', borderColor: '#F59E0B30' }]}>
+                      <Text style={s.emptyIconText}>🎯</Text>
+                    </View>
+                    <Text style={s.emptyTitle}>No quizzes in this module</Text>
+                    <Text style={s.emptyText}>
+                      Generate an AI quiz from your notes or materials to save it under {module.name}.
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push(`/quizzes?module_id=${id}` as never)}
+                      style={({ pressed }) => [
+                        s.emptyCta,
+                        { backgroundColor: '#F59E0B' },
+                        pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+                      ]}
+                    >
+                      <Text style={s.emptyCtaText}>✨ Generate Quiz for {module.name}</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ gap: Spacing.sm }}>
+                    {quizzes.map((quiz) => (
+                      <Pressable
+                        key={quiz.id}
+                        onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: String(quiz.id) } })}
+                        style={({ pressed }) => [s.noteCard, pressed && s.noteCardPressed]}
+                      >
+                        <View style={[s.noteAccent, { backgroundColor: '#F59E0B' }]} />
+                        <View style={s.noteBody}>
+                          <Text style={s.noteTitle} numberOfLines={1}>{quiz.title}</Text>
+                          {quiz.description ? (
+                            <Text style={s.notePreview} numberOfLines={1}>{quiz.description}</Text>
+                          ) : null}
+                          <View style={s.noteFooter}>
+                            <Text style={s.noteDate}>
+                              {(quiz.questions?.length ?? 0)} questions · {new Date(quiz.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </Text>
+                            <View style={[s.noteOpenBadge, { backgroundColor: '#F59E0B14', borderColor: '#F59E0B30' }]}>
+                              <Text style={[s.noteOpenText, { color: '#F59E0B' }]}>Take Quiz →</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* ── Recent Notes ── */}

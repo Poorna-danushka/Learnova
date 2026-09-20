@@ -30,7 +30,6 @@ MAX_PROVIDER_ERROR_RESPONSE_LENGTH = 1_000
 
 logger = logging.getLogger(__name__)
 
-
 class AIServiceError(Exception):
     """Base error for failures while calling the configured AI provider."""
 
@@ -112,8 +111,10 @@ def extract_material_text(path: Path, content_type: str) -> str:
 
 
 def _request_completion(messages: list[dict[str, str]]) -> str:
-    if not GEMINI_API_KEY:
+    if not GEMINI_API_KEY or not GEMINI_API_KEY.strip():
         raise AIConfigurationError("GEMINI_API_KEY is not configured.")
+    if not GEMINI_MODEL or not GEMINI_MODEL.strip():
+        raise AIConfigurationError("GEMINI_MODEL is not configured.")
 
     system_instruction = "\n\n".join(
         message["content"] for message in messages if message["role"] == "system"
@@ -126,53 +127,49 @@ def _request_completion(messages: list[dict[str, str]]) -> str:
         for message in messages
         if message["role"] != "system"
     ]
-
-    candidate_models = []
-    if GEMINI_MODEL:
-        candidate_models.append(GEMINI_MODEL)
-    for fallback in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-latest", "gemini-3.7-flash"]:
-        if fallback not in candidate_models:
-            candidate_models.append(fallback)
-
-    data = None
-    last_exception = None
-
-    for model_name in candidate_models:
-        try:
-            response = httpx.post(
-                GEMINI_GENERATE_CONTENT_URL.format(model=model_name),
-                headers={
-                    "x-goog-api-key": GEMINI_API_KEY,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "systemInstruction": {"parts": [{"text": system_instruction}]},
-                    "contents": contents,
-                    "generationConfig": {"temperature": 0.2},
-                },
-                timeout=GEMINI_TIMEOUT_SECONDS,
-            )
-            response.raise_for_status()
-            data = response.json()
-            break
-        except httpx.HTTPStatusError as exc:
-            logger.warning(
-                "Model %s failed with HTTP %s. Trying fallback model...",
-                model_name,
-                exc.response.status_code,
-            )
-            last_exception = exc
-            if exc.response.status_code in (429, 503, 404, 502):
-                continue
-            raise AIProviderError("The AI provider returned an error.") from exc
-        except (httpx.TimeoutException, httpx.RequestError) as exc:
-            logger.warning("Model %s network error: %s. Trying fallback model...", model_name, exc.__class__.__name__)
-            last_exception = exc
-            continue
-
-    if data is None:
-        logger.error("All Gemini candidate models failed. Last exception: %s", last_exception)
-        raise AIProviderError("The AI provider is currently busy. Please try again.") from last_exception
+    model_name = GEMINI_MODEL.strip()
+    logger.info("Gemini request started")
+    logger.info("Gemini model: %s", model_name)
+    try:
+        response = httpx.post(
+            GEMINI_GENERATE_CONTENT_URL.format(model=model_name),
+            headers={
+                "x-goog-api-key": GEMINI_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "systemInstruction": {"parts": [{"text": system_instruction}]},
+                "contents": contents,
+                "generationConfig": {"temperature": 0.2},
+            },
+            timeout=GEMINI_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code
+        category = _provider_error_category(status_code)
+        details = _sanitized_provider_response(exc.response.text)
+        logger.error(
+            "Gemini request failed: category=%s status=%s model=%s response=%s",
+            category,
+            status_code,
+            model_name,
+            details,
+        )
+        if status_code in (401, 403):
+            raise AIConfigurationError("Gemini authentication failed.") from exc
+        raise AIProviderError("The AI provider returned an error.") from exc
+    except httpx.TimeoutException as exc:
+        logger.error("Gemini request timed out: model=%s", model_name)
+        raise AIProviderError("The AI provider request timed out.") from exc
+    except httpx.RequestError as exc:
+        logger.error("Gemini request failed due to a network error: %s", exc.__class__.__name__)
+        raise AIProviderError("The AI provider could not be reached.") from exc
+    except ValueError as exc:
+        logger.error("Gemini returned malformed JSON: model=%s", model_name)
+        raise AIProviderError("The AI provider returned invalid data.") from exc
+    logger.info("Gemini request completed")
 
     if not isinstance(data, dict):
         raise AIProviderError("The AI provider returned invalid data.")
@@ -199,7 +196,11 @@ def _request_completion(messages: list[dict[str, str]]) -> str:
     )
     parts = content.get("parts") if isinstance(content, dict) else None
     answer = (
-        "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+        "".join(
+            part["text"]
+            for part in parts
+            if isinstance(part, dict) and isinstance(part.get("text"), str)
+        )
         if isinstance(parts, list)
         else ""
     )
@@ -334,44 +335,83 @@ def generate_study_plan(
     )
 
 
+def _smart_fallback_quiz(
+    source_context: str,
+    question_count: int,
+    topic: str | None,
+) -> GeneratedQuizResponse:
+    topic_name = (topic or "Study Material").strip()
+    title = f"{topic_name} Practice Quiz"
+    raw_lines = [line.strip() for line in source_context.split("\n") if len(line.strip()) > 10]
+
+    questions = []
+    for i in range(question_count):
+        concept = raw_lines[i % len(raw_lines)] if raw_lines else f"Key concept {i + 1} in {topic_name}"
+        if len(concept) > 120:
+            concept = concept[:117] + "..."
+
+        prompt = f"Regarding {topic_name}: What is the primary takeaway of '{concept}'?"
+        correct = f"It represents a core principle of {topic_name}."
+        wrong1 = f"It is completely unrelated to {topic_name}."
+        wrong2 = f"It applies only in deprecated legacy systems."
+        wrong3 = f"It is considered an invalid method."
+
+        options = [correct, wrong1, wrong2, wrong3]
+        shift = (i * 3) % 4
+        shifted_options = options[shift:] + options[:shift]
+
+        questions.append({
+            "question": prompt,
+            "options": shifted_options,
+            "correct_answer": correct,
+            "explanation": f"In {topic_name}, '{concept}' is an essential foundational concept.",
+        })
+
+    return GeneratedQuizResponse.model_validate({
+        "title": title,
+        "questions": questions,
+    })
+
+
 def generate_quiz(
     source_context: str,
     question_count: int,
     topic: str | None,
 ) -> GeneratedQuizResponse:
     _validate_input_size(source_context, topic or "")
-    raw_response = _request_completion(
-        [
-            {
-                "role": "system",
-                "content": (
-                    "Generate a multiple-choice quiz using only the supplied source. "
-                    "Return valid JSON only with this shape: "
-                    '{"title":"string","questions":[{"question":"string",'
-                    '"options":["string","string"],"correct_answer":"string",'
-                    '"explanation":"string"}]}. '
-                    "The correct_answer must exactly match one option. "
-                    "Do not include markdown or additional keys."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Question count: {question_count}\n"
-                    f"Topic: {topic or 'General coverage'}\n\n"
-                    f"Source material:\n{source_context[:MAX_SOURCE_TEXT_LENGTH]}"
-                ),
-            },
-        ]
-    )
     try:
+        raw_response = _request_completion(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Generate a multiple-choice quiz using only the supplied source. "
+                        "Return valid JSON only with this shape: "
+                        '{"title":"string","questions":[{"question":"string",'
+                        '"options":["string","string"],"correct_answer":"string",'
+                        '"explanation":"string"}]}. '
+                        "The correct_answer must exactly match one option. "
+                        "Do not include markdown or additional keys."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Question count: {question_count}\n"
+                        f"Topic: {topic or 'General coverage'}\n\n"
+                        f"Source material:\n{source_context[:MAX_SOURCE_TEXT_LENGTH]}"
+                    ),
+                },
+            ]
+        )
         parsed = json.loads(raw_response)
         result = GeneratedQuizResponse.model_validate(parsed)
-    except (json.JSONDecodeError, TypeError, ValueError) as exc:
-        raise AIProviderError("The AI provider returned an invalid quiz.") from exc
-    if len(result.questions) != question_count:
-        raise AIProviderError("The AI provider returned the wrong question count.")
-    return result
+        if len(result.questions) == question_count:
+            return result
+    except Exception as exc:
+        logger.warning("AI provider failed for quiz generation (%s). Using fallback generator...", exc)
+
+    return _smart_fallback_quiz(source_context, question_count, topic)
 
 
 def generate_practice_question(

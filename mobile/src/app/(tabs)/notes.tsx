@@ -14,7 +14,6 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   Screen,
-  BottomNav,
   SearchInput,
   Chip,
   EmptyState,
@@ -319,8 +318,6 @@ export default function NotesScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       </Screen>
-
-      <BottomNav active="Notes" onNavigate={(r) => router.push(r as never)} />
 
       <DeleteConfirmModal
         visible={!!noteToDelete}

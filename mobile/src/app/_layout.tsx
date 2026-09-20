@@ -114,15 +114,11 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
 
       {/* Feature screens */}
-      <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
 
-      <Stack.Screen name="modules" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="modules/[id]" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="notes" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="notes/new" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="notes/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="materials" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="planning" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="calendar" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="quizzes" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="quiz/[id]" options={{ animation: 'slide_from_right' }} />

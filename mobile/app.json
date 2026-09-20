@@ -52,6 +52,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "poorna-danushka",
+    "extra": {
+      "eas": {
+        "projectId": "8b2edff4-a3ae-41b2-b708-7f658d393afe"
+      }
     }
   }
 }

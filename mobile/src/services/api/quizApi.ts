@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 import type { GeneratedQuizResponse } from '@/types/ai';
 
-export type QuizQuestion = { id: number; quiz_id: number; prompt: string; options: string[]; correct_option: number; position: number };
+export type QuizQuestion = { id: number; quiz_id: number; prompt: string; options: string[]; correct_option: number; position: number; explanation?: string };
 export type Quiz = { id: number; owner_id: number; module_id: number; title: string; description?: string; questions?: QuizQuestion[]; created_at: string; updated_at: string };
 export type Attempt = { id: number; quiz_id: number; owner_id: number; score: number; total: number; answers: Record<string, number>; completed_at: string };
 export const getQuizzes = async (moduleId?: number) =>
